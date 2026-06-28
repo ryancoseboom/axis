@@ -3,6 +3,7 @@ import type {
   DevelopmentSignal,
   MovementOption,
   PillarMemory,
+  PracticeEntry,
   PracticeIntensity,
   Program,
   ProgramDay
@@ -22,10 +23,18 @@ export type ProgramSessionInput = {
   programId: string;
   programDayId: string;
   date: string;
-  movementsCompleted: string[];
-  setsCompleted: number;
+  movementsCompleted?: string[];
+  setsCompleted?: number;
   notes?: string;
   perceivedEffort?: PracticeIntensity;
+};
+
+export type CompleteProgramSessionResult = {
+  memory: PillarMemory;
+  session: CompletedProgramSession;
+  practiceEntry: PracticeEntry;
+  developmentSignals: DevelopmentSignal[];
+  progression: ProgramProgression;
 };
 
 const DEFAULT_EQUIPMENT = ["dumbbells", "cable machine", "Smith machine", "barbell", "plates"];
@@ -113,10 +122,37 @@ export function recordCompletedProgramSession(input: ProgramSessionInput, existi
     programId: input.programId,
     programDayId: input.programDayId,
     date: input.date,
-    movementsCompleted: input.movementsCompleted,
-    setsCompleted: input.setsCompleted,
+    movementsCompleted: input.movementsCompleted ?? [],
+    setsCompleted: input.setsCompleted ?? 0,
     notes: input.notes?.trim() ?? "",
     perceivedEffort: input.perceivedEffort
+  };
+}
+
+export function completeProgramSession(memory: PillarMemory, input: ProgramSessionInput): CompleteProgramSessionResult {
+  const program = memory.programs?.find((item) => item.id === input.programId);
+  const programDay = program?.days.find((day) => day.id === input.programDayId);
+  const existingSessions = memory.completedProgramSessions ?? [];
+  const session = recordCompletedProgramSession(input, existingSessions);
+  const completedProgramSessions = [...existingSessions, session];
+  const practiceEntry = programSessionToPracticeEntry(session, program, programDay, memory.practiceEntries.length);
+  const memoryWithCompletion: PillarMemory = {
+    ...memory,
+    practiceEntries: [...memory.practiceEntries, practiceEntry],
+    completedProgramSessions
+  };
+  const developmentSignals = generateProgramDevelopmentSignals(memoryWithCompletion, input.date);
+  const memoryWithSignals: PillarMemory = {
+    ...memoryWithCompletion,
+    developmentSignals: replaceProgramSignals(memory.developmentSignals ?? [], input.programId, developmentSignals)
+  };
+
+  return {
+    memory: memoryWithSignals,
+    session,
+    practiceEntry,
+    developmentSignals,
+    progression: program ? getCurrentProgramDay(program, completedProgramSessions) : fallbackProgression()
   };
 }
 
@@ -174,6 +210,40 @@ function movement(
   tags: string[]
 ): MovementOption {
   return { id, name, movementPattern, primaryFocus, secondaryFocus, equipment, contraindications, tags };
+}
+
+function programSessionToPracticeEntry(
+  session: CompletedProgramSession,
+  program: Program | undefined,
+  programDay: ProgramDay | undefined,
+  existingEntryCount: number
+): PracticeEntry {
+  const title = programDay ? `Completed ${programDay.name}.` : "Completed program session.";
+  const movementText = session.movementsCompleted.length > 0 ? ` Movements: ${session.movementsCompleted.join(", ")}.` : "";
+  const setsText = session.setsCompleted > 0 ? ` Sets completed: ${session.setsCompleted}.` : "";
+
+  return {
+    id: `practice-${slug(program?.pillarId ?? "program")}-${slug(session.date)}-${existingEntryCount + 1}`,
+    pillarId: program?.pillarId ?? "pillar-health",
+    date: session.date,
+    title,
+    notes: `${session.notes}${movementText}${setsText}`.trim(),
+    topics: programDay ? [programDay.id] : [],
+    intensity: session.perceivedEffort ?? "medium",
+    confidence: session.movementsCompleted.length > 0 ? 7 : 5,
+    familiarity: 5,
+    source: "manual"
+  };
+}
+
+function replaceProgramSignals(existingSignals: DevelopmentSignal[], programId: string, nextSignals: DevelopmentSignal[]): DevelopmentSignal[] {
+  return [...existingSignals.filter((signal) => !signal.id.startsWith(`signal-program-${programId}-`)), ...nextSignals];
+}
+
+function fallbackProgression(): ProgramProgression {
+  const currentDay = sampleWeightliftingProgram.days[0];
+  const nextDay = sampleWeightliftingProgram.days[1] ?? currentDay;
+  return { currentDay, nextDay };
 }
 
 function hasRequiredEquipment(movementOption: MovementOption, availableEquipment: Set<string>): boolean {

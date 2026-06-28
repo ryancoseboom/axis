@@ -4,6 +4,7 @@ import { generateToday } from "./engine";
 import { morningInputToUserContext } from "./morningInput";
 import { generateDevelopmentSignals, samplePillars } from "./pillars";
 import {
+  completeProgramSession,
   generateProgramDevelopmentSignals,
   getCurrentProgramDay,
   recommendMovementsForProgramDay,
@@ -129,4 +130,80 @@ test("Decision Graph can consume the program signal", () => {
 
   assert.ok(today.candidateDecisions.some((candidate) => candidate.title.includes("Pull - back")));
   assert.ok(today.candidateDecisions.some((candidate) => candidate.protects === "Health"));
+});
+
+
+test("completeProgramSession advances Pull - biceps to Push - chest", () => {
+  const result = completeProgramSession(programMemory(), {
+    programId: sampleWeightliftingProgram.id,
+    programDayId: "program-day-pull-biceps",
+    date: "2026-06-28",
+    movementsCompleted: ["movement-cable-curl", "movement-incline-db-curl"],
+    setsCompleted: 6,
+    notes: "Short completion path.",
+    perceivedEffort: "medium"
+  });
+
+  assert.equal(result.progression.currentDay.name, "Push - chest");
+  assert.equal(result.progression.nextDay.name, "Pull - back");
+});
+
+test("completeProgramSession records completed movements and sets", () => {
+  const result = completeProgramSession(programMemory(), {
+    programId: sampleWeightliftingProgram.id,
+    programDayId: "program-day-pull-biceps",
+    date: "2026-06-28",
+    movementsCompleted: ["movement-cable-curl", "movement-preacher-curl"],
+    setsCompleted: 6
+  });
+
+  assert.deepEqual(result.session.movementsCompleted, ["movement-cable-curl", "movement-preacher-curl"]);
+  assert.equal(result.session.setsCompleted, 6);
+  assert.equal(result.memory.completedProgramSessions?.length, 1);
+});
+
+test("completed program session creates a practice entry and updates DevelopmentSignal", () => {
+  const result = completeProgramSession(programMemory(), {
+    programId: sampleWeightliftingProgram.id,
+    programDayId: "program-day-pull-biceps",
+    date: "2026-06-28",
+    movementsCompleted: ["movement-cable-curl"],
+    setsCompleted: 3
+  });
+
+  assert.equal(result.practiceEntry.pillarId, "pillar-health");
+  assert.equal(result.practiceEntry.title, "Completed Pull - biceps.");
+  assert.ok(result.developmentSignals.some((signal) => signal.title.includes("Push - chest")));
+  assert.ok(result.memory.developmentSignals?.some((signal) => signal.title.includes("Push - chest")));
+});
+
+test("Today can recommend next program day after completion", () => {
+  const result = completeProgramSession(programMemory(), {
+    programId: sampleWeightliftingProgram.id,
+    programDayId: "program-day-pull-biceps",
+    date: "2026-06-28",
+    movementsCompleted: ["movement-cable-curl", "movement-incline-db-curl"],
+    setsCompleted: 6
+  });
+  const signals = generateDevelopmentSignals(result.memory, "2026-06-29");
+  const today = generateToday({
+    ...morningInputToUserContext({ mainIntention: "Protect the strongest thread" }),
+    pillarMemory: { ...result.memory, developmentSignals: signals }
+  });
+
+  assert.ok(today.candidateDecisions.some((candidate) => candidate.title.includes("Push - chest")));
+  assert.ok(today.candidateDecisions.some((candidate) => candidate.protects === "Health"));
+});
+
+test("partial program completion input falls back safely", () => {
+  const result = completeProgramSession(programMemory(), {
+    programId: sampleWeightliftingProgram.id,
+    programDayId: "program-day-pull-biceps",
+    date: "2026-06-28"
+  });
+
+  assert.deepEqual(result.session.movementsCompleted, []);
+  assert.equal(result.session.setsCompleted, 0);
+  assert.equal(result.progression.currentDay.name, "Push - chest");
+  assert.ok(result.developmentSignals.length > 0);
 });
