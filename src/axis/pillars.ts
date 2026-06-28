@@ -1,10 +1,8 @@
-import { applyPracticeEntryToKnowledgeState, generateKnowledgeDevelopmentSignals } from "./knowledgeMaps";
+import { applyPracticeEntryToKnowledgeState, createKnowledgeMap, generateKnowledgeDevelopmentSignals } from "./knowledgeMaps";
 import { generateProgramDevelopmentSignals } from "./programs";
 import type {
   DevelopmentSignal,
-  KnowledgeEdge,
   KnowledgeMap,
-  KnowledgeNode,
   KnowledgeState,
   Pillar,
   PillarMemory,
@@ -34,24 +32,10 @@ export const samplePillars: Pillar[] = [
     priority: 8,
     identityWeight: 8,
     status: "active",
-    knowledgeMap: knowledgeMap("knowledge-map-bjj", "pillar-bjj", "BJJ Knowledge Map", [
-      knowledgeNode("knowledge-bjj-closed-guard", "pillar-bjj", "Closed Guard", "Control position for posture breaking, attacks, and transitions.", ["topic-closed-guard"]),
-      knowledgeNode("knowledge-bjj-arm-bar", "pillar-bjj", "Arm Bar", "Arm isolation and finishing mechanics.", ["topic-arm-bar"]),
-      knowledgeNode("knowledge-bjj-triangle", "pillar-bjj", "Triangle", "Leg-based choke connected to guard attacks.", ["topic-triangle-choke"]),
-      knowledgeNode("knowledge-bjj-omoplata", "pillar-bjj", "Omoplata", "Shoulder lock and sweeping threat from guard.", ["topic-omoplata"]),
-      knowledgeNode("knowledge-bjj-guard-retention", "pillar-bjj", "Guard Retention", "Frames, hip movement, and recovery under passing pressure.", ["topic-guard-retention"]),
-      knowledgeNode("knowledge-bjj-back-takes", "pillar-bjj", "Back Takes", "Routes to back control and finishing positions.", ["topic-back-takes"])
-    ], [
-      knowledgeEdge("knowledge-rel-closed-guard-arm-bar", "knowledge-bjj-closed-guard", "knowledge-bjj-arm-bar", "prerequisite", "Closed Guard creates reliable Arm Bar entries."),
-      knowledgeEdge("knowledge-rel-arm-bar-triangle", "knowledge-bjj-arm-bar", "knowledge-bjj-triangle", "related_to", "Arm Bar and Triangle share posture-breaking mechanics."),
-      knowledgeEdge("knowledge-rel-arm-bar-omoplata", "knowledge-bjj-arm-bar", "knowledge-bjj-omoplata", "alternative_to", "Omoplata follows common Arm Bar defenses."),
-      knowledgeEdge("knowledge-rel-arm-bar-closed-guard", "knowledge-bjj-arm-bar", "knowledge-bjj-closed-guard", "reinforces", "Arm Bar practice reinforces Closed Guard control."),
-      knowledgeEdge("knowledge-rel-arm-bar-review", "knowledge-bjj-arm-bar", "knowledge-bjj-arm-bar", "reviews", "Arm Bar finishing mechanics should be revisited after practice."),
-      knowledgeEdge("knowledge-rel-guard-retention-back-takes", "knowledge-bjj-guard-retention", "knowledge-bjj-back-takes", "follow_up", "Retaining guard creates chances to recover angle and attack the back.")
-    ])
+    knowledgeMap: bjjKnowledgeMap()
   },
   pillar("pillar-axis", "Axis", "Build the reasoning engine and product philosophy.", 10, axisKnowledgeMap()),
-  pillar("pillar-music", "Music", "Write, record, and deepen musical craft.", 8),
+  pillar("pillar-music", "Music", "Write, record, and deepen musical craft.", 8, musicKnowledgeMap()),
   pillar("pillar-health", "Health", "Protect vitality, strength, and recovery.", 7, healthKnowledgeMap()),
   pillar("pillar-porthos", "Porthos", "Care, relationship, and daily steadiness with Porthos.", 7)
 ];
@@ -147,53 +131,92 @@ function pillar(id: string, name: string, description: string, priority: number,
   return { id, name, description, priority, identityWeight: priority, status: "active", knowledgeMap: map };
 }
 
-function knowledgeMap(id: string, pillarId: string, name: string, nodes: KnowledgeNode[], edges: KnowledgeEdge[]): KnowledgeMap {
-  return { id, pillarId, name, nodes, edges };
-}
-
-function knowledgeNode(id: string, pillarId: string, name: string, description: string, sourceTopicIds: string[] = [], aliases: string[] = []): KnowledgeNode {
-  return { id, pillarId, concept: { id: `concept-${id}`, name, description, sourceTopicIds, aliases } };
-}
-
-function knowledgeEdge(id: string, fromNodeId: string, toNodeId: string, type: KnowledgeEdge["type"], description: string): KnowledgeEdge {
-  return { id, fromNodeId, toNodeId, type, description };
-}
-
 function emptyKnowledgeMap(pillarId: string, name: string): KnowledgeMap {
-  return knowledgeMap(`knowledge-map-${slug(pillarId)}`, pillarId, `${name} Knowledge Map`, [], []);
+  return createKnowledgeMap({ pillarId, name: `${name} Knowledge Map`, concepts: [] });
+}
+
+function bjjKnowledgeMap(): KnowledgeMap {
+  return createKnowledgeMap({
+    pillarId: "pillar-bjj",
+    name: "BJJ Knowledge Map",
+    concepts: [
+      { name: "Closed Guard", description: "Control position for posture breaking, attacks, and transitions.", sourceTopicIds: ["topic-closed-guard"] },
+      { name: "Arm Bar", description: "Arm isolation and finishing mechanics.", sourceTopicIds: ["topic-arm-bar"] },
+      { name: "Triangle", description: "Leg-based choke connected to guard attacks.", sourceTopicIds: ["topic-triangle-choke"], aliases: ["Triangle Choke"] },
+      { name: "Omoplata", description: "Shoulder lock and sweeping threat from guard.", sourceTopicIds: ["topic-omoplata"] },
+      { name: "Guard Retention", description: "Frames, hip movement, and recovery under passing pressure.", sourceTopicIds: ["topic-guard-retention"] },
+      { name: "Back Takes", description: "Routes to back control and finishing positions.", sourceTopicIds: ["topic-back-takes"] }
+    ],
+    relationships: [
+      ["Closed Guard", "prerequisite", "Arm Bar", "Closed Guard creates reliable Arm Bar entries."],
+      ["Arm Bar", "related_to", "Triangle", "Arm Bar and Triangle share posture-breaking mechanics."],
+      ["Arm Bar", "alternative_to", "Omoplata", "Omoplata follows common Arm Bar defenses."],
+      ["Arm Bar", "reinforces", "Closed Guard", "Arm Bar practice reinforces Closed Guard control."],
+      ["Arm Bar", "reviews", "Arm Bar", "Arm Bar finishing mechanics should be revisited after practice."],
+      ["Guard Retention", "follow_up", "Back Takes", "Retaining guard creates chances to recover angle and attack the back."]
+    ]
+  });
 }
 
 function axisKnowledgeMap(): KnowledgeMap {
-  return knowledgeMap("knowledge-map-axis", "pillar-axis", "Axis Knowledge Map", [
-    knowledgeNode("knowledge-axis-decision-graph", "pillar-axis", "Decision Graph", "The deterministic graph that turns facts into explainable decisions.", [], ["decision graph"]),
-    knowledgeNode("knowledge-axis-explainability", "pillar-axis", "Explainability", "Clear reasons and paths for every selected output.", [], ["explainability"]),
-    knowledgeNode("knowledge-axis-confidence", "pillar-axis", "Confidence", "Calibrated trust in a generated plan.", [], ["confidence"]),
-    knowledgeNode("knowledge-axis-calendar", "pillar-axis", "Calendar", "Provider-agnostic time and commitment context.", [], ["calendar"]),
-    knowledgeNode("knowledge-axis-identity", "pillar-axis", "Identity", "The values and priorities protected by Axis.", [], ["identity"])
-  ], [
-    knowledgeEdge("knowledge-rel-decision-graph-explainability", "knowledge-axis-decision-graph", "knowledge-axis-explainability", "part_of", "Explainability exposes why the Decision Graph chose an output."),
-    knowledgeEdge("knowledge-rel-confidence-explainability", "knowledge-axis-confidence", "knowledge-axis-explainability", "reinforces", "Confidence becomes more useful when the explanation is visible."),
-    knowledgeEdge("knowledge-rel-calendar-decision-graph", "knowledge-axis-calendar", "knowledge-axis-decision-graph", "reinforces", "Calendar facts improve Decision Graph context fit."),
-    knowledgeEdge("knowledge-rel-identity-decision-graph", "knowledge-axis-identity", "knowledge-axis-decision-graph", "prerequisite", "Identity gives the Decision Graph something to protect.")
-  ]);
+  return createKnowledgeMap({
+    pillarId: "pillar-axis",
+    name: "Axis Knowledge Map",
+    concepts: [
+      { name: "Decision Graph", description: "The deterministic graph that turns facts into explainable decisions.", aliases: ["decision graph"] },
+      { name: "Explainability", description: "Clear reasons and paths for every selected output.", aliases: ["explainability"] },
+      { name: "Confidence", description: "Calibrated trust in a generated plan.", aliases: ["confidence"] },
+      { name: "Calendar", description: "Provider-agnostic time and commitment context.", aliases: ["calendar"] },
+      { name: "Identity", description: "The values and priorities protected by Axis.", aliases: ["identity"] }
+    ],
+    relationships: [
+      ["Decision Graph", "part_of", "Explainability", "Explainability exposes why the Decision Graph chose an output."],
+      ["Confidence", "reinforces", "Explainability", "Confidence becomes more useful when the explanation is visible."],
+      ["Calendar", "reinforces", "Decision Graph", "Calendar facts improve Decision Graph context fit."],
+      ["Identity", "prerequisite", "Decision Graph", "Identity gives the Decision Graph something to protect."]
+    ]
+  });
+}
+
+function musicKnowledgeMap(): KnowledgeMap {
+  return createKnowledgeMap({
+    pillarId: "pillar-music",
+    name: "Music Knowledge Map",
+    concepts: [
+      "Songwriting",
+      "Recording",
+      "Practice",
+      "Arrangement"
+    ],
+    relationships: [
+      ["Songwriting", "follow_up", "Arrangement"],
+      ["Arrangement", "follow_up", "Recording"],
+      ["Practice", "reinforces", "Recording"]
+    ]
+  });
 }
 
 function healthKnowledgeMap(): KnowledgeMap {
-  return knowledgeMap("knowledge-map-health", "pillar-health", "Weightlifting Knowledge Map", [
-    knowledgeNode("knowledge-lift-pull", "pillar-health", "Pull", "Pulling patterns for back and arm development.", ["program-day-pull-biceps", "program-day-pull-back"], ["pull"]),
-    knowledgeNode("knowledge-lift-push", "pillar-health", "Push", "Pressing patterns for chest and shoulder development.", ["program-day-push-chest", "program-day-push-shoulders"], ["push"]),
-    knowledgeNode("knowledge-lift-chest", "pillar-health", "Chest", "Chest-focused pressing and fly work.", ["program-day-push-chest"], ["chest"]),
-    knowledgeNode("knowledge-lift-back", "pillar-health", "Back", "Back-focused rowing and pulldown work.", ["program-day-pull-back"], ["back"]),
-    knowledgeNode("knowledge-lift-biceps", "pillar-health", "Biceps", "Curling and elbow-flexion strength.", ["program-day-pull-biceps"], ["biceps"]),
-    knowledgeNode("knowledge-lift-squat", "pillar-health", "Squat", "Knee-dominant lower-body strength.", ["program-day-legs"], ["squat", "smith squat"]),
-    knowledgeNode("knowledge-lift-cable-row", "pillar-health", "Cable Row", "Horizontal pull for mid-back and lat development.", ["movement-seated-cable-row"], ["seated cable row", "cable row"])
-  ], [
-    knowledgeEdge("knowledge-rel-pull-biceps", "knowledge-lift-pull", "knowledge-lift-biceps", "part_of", "Biceps work is part of the Pull pattern."),
-    knowledgeEdge("knowledge-rel-pull-back", "knowledge-lift-pull", "knowledge-lift-back", "part_of", "Back work is part of the Pull pattern."),
-    knowledgeEdge("knowledge-rel-back-cable-row", "knowledge-lift-back", "knowledge-lift-cable-row", "follow_up", "Cable Row is a concrete follow-up for Back development."),
-    knowledgeEdge("knowledge-rel-push-chest", "knowledge-lift-push", "knowledge-lift-chest", "part_of", "Chest work is part of the Push pattern."),
-    knowledgeEdge("knowledge-rel-squat-push", "knowledge-lift-squat", "knowledge-lift-push", "contrasts_with", "Squat and Push stress different movement patterns.")
-  ]);
+  return createKnowledgeMap({
+    pillarId: "pillar-health",
+    name: "Weightlifting Knowledge Map",
+    concepts: [
+      { name: "Pull", description: "Pulling patterns for back and arm development.", sourceTopicIds: ["program-day-pull-biceps", "program-day-pull-back"], aliases: ["pull"] },
+      { name: "Push", description: "Pressing patterns for chest and shoulder development.", sourceTopicIds: ["program-day-push-chest", "program-day-push-shoulders"], aliases: ["push"] },
+      { name: "Chest", description: "Chest-focused pressing and fly work.", sourceTopicIds: ["program-day-push-chest"], aliases: ["chest"] },
+      { name: "Back", description: "Back-focused rowing and pulldown work.", sourceTopicIds: ["program-day-pull-back"], aliases: ["back"] },
+      { name: "Biceps", description: "Curling and elbow-flexion strength.", sourceTopicIds: ["program-day-pull-biceps"], aliases: ["biceps"] },
+      { name: "Squat", description: "Knee-dominant lower-body strength.", sourceTopicIds: ["program-day-legs"], aliases: ["squat", "smith squat"] },
+      { name: "Cable Row", description: "Horizontal pull for mid-back and lat development.", sourceTopicIds: ["movement-seated-cable-row"], aliases: ["seated cable row", "cable row"] }
+    ],
+    relationships: [
+      ["Pull", "part_of", "Biceps", "Biceps work is part of the Pull pattern."],
+      ["Pull", "part_of", "Back", "Back work is part of the Pull pattern."],
+      ["Back", "follow_up", "Cable Row", "Cable Row is a concrete follow-up for Back development."],
+      ["Push", "part_of", "Chest", "Chest work is part of the Push pattern."],
+      ["Squat", "contrasts_with", "Push", "Squat and Push stress different movement patterns."]
+    ]
+  });
 }
 
 function uniqueSignals(signals: DevelopmentSignal[]): DevelopmentSignal[] {

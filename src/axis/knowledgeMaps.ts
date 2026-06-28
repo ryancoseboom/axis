@@ -16,8 +16,55 @@ export type KnowledgeQueryResult = {
   relationship?: KnowledgeEdge;
 };
 
+export type KnowledgeConceptInput =
+  | string
+  | {
+      name: string;
+      description?: string;
+      aliases?: string[];
+      sourceTopicIds?: string[];
+    };
+
+export type KnowledgeRelationshipTuple = [fromConceptName: string, type: ConceptRelationship, toConceptName: string, description?: string];
+
+export type KnowledgeRelationshipInput =
+  | KnowledgeRelationshipTuple
+  | {
+      from: string;
+      type: ConceptRelationship;
+      to: string;
+      description?: string;
+    };
+
+export type CreateKnowledgeMapInput = {
+  pillarId: string;
+  name?: string;
+  concepts: KnowledgeConceptInput[];
+  relationships?: KnowledgeRelationshipInput[];
+};
+
+export type InitialKnowledgeStateInput = {
+  concept: string;
+  status: KnowledgeNodeStatus;
+  introducedDate?: string;
+  lastPracticedDate?: string;
+  reviewAfterDate?: string;
+  lastSourceEntryId?: string;
+};
+
 const REVIEW_DELAY_DAYS = 2;
 const NEGLECTED_AFTER_DAYS = 14;
+
+const VALID_RELATIONSHIPS: ConceptRelationship[] = [
+  "related_to",
+  "prerequisite",
+  "reinforces",
+  "reviews",
+  "part_of",
+  "alternative_to",
+  "follow_up",
+  "contrasts_with"
+];
 
 const NEXT_RELATIONSHIPS: ConceptRelationship[] = ["follow_up", "prerequisite"];
 const RELATED_RELATIONSHIPS: ConceptRelationship[] = [
@@ -29,6 +76,93 @@ const RELATED_RELATIONSHIPS: ConceptRelationship[] = [
   "follow_up",
   "contrasts_with"
 ];
+
+export function createKnowledgeMap(input: CreateKnowledgeMapInput): KnowledgeMap {
+  const pillarSlug = slug(input.pillarId);
+  const seenConcepts = new Set<string>();
+  const nodes = input.concepts.map((conceptInput) => {
+    const concept = normalizeConceptInput(conceptInput);
+    const conceptKey = normalize(concept.name);
+    if (seenConcepts.has(conceptKey)) {
+      throw new Error(`Duplicate Knowledge Map concept: ${concept.name}`);
+    }
+    seenConcepts.add(conceptKey);
+
+    const nodeId = `knowledge-${pillarSlug}-${slug(concept.name)}`;
+    return {
+      id: nodeId,
+      pillarId: input.pillarId,
+      concept: {
+        id: `concept-${nodeId}`,
+        name: concept.name,
+        description: concept.description ?? `${concept.name} concept.`,
+        aliases: concept.aliases,
+        sourceTopicIds: concept.sourceTopicIds
+      }
+    } satisfies KnowledgeNode;
+  });
+  const nodesByName = new Map(nodes.map((node) => [normalize(node.concept.name), node]));
+  const seenEdges = new Set<string>();
+  const edges = (input.relationships ?? []).map((relationshipInput) => {
+    const relationship = normalizeRelationshipInput(relationshipInput);
+    if (!VALID_RELATIONSHIPS.includes(relationship.type)) {
+      throw new Error(`Invalid Knowledge Map relationship type: ${relationship.type}`);
+    }
+
+    const fromNode = nodesByName.get(normalize(relationship.from));
+    const toNode = nodesByName.get(normalize(relationship.to));
+    if (!fromNode || !toNode) {
+      throw new Error(`Knowledge Map relationship references missing concept: ${relationship.from} -> ${relationship.to}`);
+    }
+
+    const edgeKey = `${fromNode.id}:${relationship.type}:${toNode.id}`;
+    if (seenEdges.has(edgeKey)) {
+      throw new Error(`Duplicate Knowledge Map edge: ${relationship.from} ${relationship.type} ${relationship.to}`);
+    }
+    seenEdges.add(edgeKey);
+
+    return {
+      id: `knowledge-rel-${slug(relationship.from)}-${relationship.type}-${slug(relationship.to)}`,
+      fromNodeId: fromNode.id,
+      toNodeId: toNode.id,
+      type: relationship.type,
+      description: relationship.description ?? defaultRelationshipDescription(relationship.from, relationship.type, relationship.to)
+    } satisfies KnowledgeEdge;
+  });
+
+  return {
+    id: `knowledge-map-${pillarSlug}`,
+    pillarId: input.pillarId,
+    name: input.name ?? `${input.pillarId} Knowledge Map`,
+    nodes,
+    edges
+  };
+}
+
+export function createInitialKnowledgeState(knowledgeMap: KnowledgeMap, states: InitialKnowledgeStateInput[]): KnowledgeState[] {
+  const nodesByName = new Map(knowledgeMap.nodes.map((node) => [normalize(node.concept.name), node]));
+  const seen = new Set<string>();
+
+  return states.map((state) => {
+    const node = nodesByName.get(normalize(state.concept));
+    if (!node) {
+      throw new Error(`Initial KnowledgeState references missing concept: ${state.concept}`);
+    }
+    if (seen.has(node.id)) {
+      throw new Error(`Duplicate initial KnowledgeState concept: ${state.concept}`);
+    }
+    seen.add(node.id);
+
+    return {
+      nodeId: node.id,
+      status: state.status,
+      introducedDate: state.introducedDate,
+      lastPracticedDate: state.lastPracticedDate,
+      reviewAfterDate: state.reviewAfterDate,
+      lastSourceEntryId: state.lastSourceEntryId
+    };
+  });
+}
 
 export function relatedConcepts(knowledgeMap: KnowledgeMap, nodeId: string): KnowledgeQueryResult[] {
   return connectedConcepts(knowledgeMap, nodeId, RELATED_RELATIONSHIPS);
@@ -279,6 +413,27 @@ function latestDate(current: string | undefined, next: string | undefined): stri
   if (!current) return next;
   if (!next) return current;
   return next > current ? next : current;
+}
+
+function normalizeConceptInput(input: KnowledgeConceptInput): Exclude<KnowledgeConceptInput, string> {
+  return typeof input === "string" ? { name: input } : input;
+}
+
+function normalizeRelationshipInput(input: KnowledgeRelationshipInput): Exclude<KnowledgeRelationshipInput, KnowledgeRelationshipTuple> {
+  if (Array.isArray(input)) {
+    const [from, type, to, description] = input;
+    return { from, type, to, description };
+  }
+
+  return input;
+}
+
+function defaultRelationshipDescription(from: string, type: ConceptRelationship, to: string): string {
+  return `${from} ${type.replace(/_/g, " ")} ${to}.`;
+}
+
+function slug(value: string): string {
+  return value.toLowerCase().replace(/^pillar-/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
 function normalize(value: string): string {

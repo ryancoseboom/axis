@@ -3,6 +3,8 @@ import test from "node:test";
 import { generateToday } from "./engine";
 import {
   applyPracticeEntryToKnowledgeState,
+  createInitialKnowledgeState,
+  createKnowledgeMap,
   generateKnowledgeDevelopmentSignals,
   neglectedConcepts,
   nextConcepts,
@@ -36,6 +38,73 @@ function memoryWithEntry(entry: PracticeEntry): PillarMemory {
   const memory = { pillars: samplePillars, practiceEntries: [entry] };
   return { ...memory, knowledgeStates: applyPracticeEntryToKnowledgeState(memory, entry) };
 }
+
+test("createKnowledgeMap creates canonical nodes", () => {
+  const map = createKnowledgeMap({
+    pillarId: "pillar-test",
+    concepts: [
+      "Closed Guard",
+      { name: "Arm Bar", description: "Arm isolation.", aliases: ["armbar"], sourceTopicIds: ["topic-arm-bar"] }
+    ]
+  });
+
+  assert.equal(map.id, "knowledge-map-test");
+  assert.equal(map.nodes[0]?.id, "knowledge-test-closed-guard");
+  assert.equal(map.nodes[1]?.concept.aliases?.[0], "armbar");
+  assert.equal(map.nodes[1]?.concept.sourceTopicIds?.[0], "topic-arm-bar");
+});
+
+test("createKnowledgeMap creates canonical edges", () => {
+  const map = createKnowledgeMap({
+    pillarId: "pillar-test",
+    concepts: ["Arm Bar", "Triangle Choke"],
+    relationships: [["Arm Bar", "related_to", "Triangle Choke"]]
+  });
+
+  assert.equal(map.edges[0]?.fromNodeId, "knowledge-test-arm-bar");
+  assert.equal(map.edges[0]?.toNodeId, "knowledge-test-triangle-choke");
+  assert.equal(map.edges[0]?.type, "related_to");
+});
+
+test("createInitialKnowledgeState creates state from concept names", () => {
+  const map = createKnowledgeMap({ pillarId: "pillar-test", concepts: ["Arm Bar"] });
+  const states = createInitialKnowledgeState(map, [{ concept: "Arm Bar", status: "introduced", introducedDate: "2026-06-25" }]);
+
+  assert.equal(states[0]?.nodeId, "knowledge-test-arm-bar");
+  assert.equal(states[0]?.status, "introduced");
+  assert.equal(states[0]?.introducedDate, "2026-06-25");
+});
+
+test("createKnowledgeMap rejects duplicate concept names", () => {
+  assert.throws(() => createKnowledgeMap({ pillarId: "pillar-test", concepts: ["Arm Bar", "arm bar"] }), /Duplicate Knowledge Map concept/);
+});
+
+test("createKnowledgeMap rejects missing relationship targets", () => {
+  assert.throws(() => createKnowledgeMap({
+    pillarId: "pillar-test",
+    concepts: ["Arm Bar"],
+    relationships: [["Arm Bar", "related_to", "Triangle Choke"]]
+  }), /missing concept/);
+});
+
+test("createKnowledgeMap rejects duplicate edges", () => {
+  assert.throws(() => createKnowledgeMap({
+    pillarId: "pillar-test",
+    concepts: ["Arm Bar", "Triangle Choke"],
+    relationships: [
+      ["Arm Bar", "related_to", "Triangle Choke"],
+      ["Arm Bar", "related_to", "Triangle Choke"]
+    ]
+  }), /Duplicate Knowledge Map edge/);
+});
+
+test("createKnowledgeMap rejects invalid relationship types", () => {
+  assert.throws(() => createKnowledgeMap({
+    pillarId: "pillar-test",
+    concepts: ["Arm Bar", "Triangle Choke"],
+    relationships: [["Arm Bar", "invalid_relationship" as never, "Triangle Choke"]]
+  }), /Invalid Knowledge Map relationship type/);
+});
 
 test("Knowledge Map relationship traversal finds related concepts", () => {
   const related = relatedConcepts(bjjMap(), "knowledge-bjj-arm-bar");
@@ -132,6 +201,6 @@ test("Programs determine sequence while Knowledge Maps suggest related concepts"
   const healthStates = result.memory.knowledgeStates ?? [];
 
   assert.equal(result.progression.currentDay.name, "Push - shoulders");
-  assert.ok(healthStates.some((state) => state.nodeId === "knowledge-lift-back" && state.status === "practiced"));
-  assert.ok(healthStates.some((state) => state.nodeId === "knowledge-lift-cable-row" && state.status === "practiced"));
+  assert.ok(healthStates.some((state) => state.nodeId === "knowledge-health-back" && state.status === "practiced"));
+  assert.ok(healthStates.some((state) => state.nodeId === "knowledge-health-cable-row" && state.status === "practiced"));
 });
