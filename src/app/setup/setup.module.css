@@ -143,6 +143,79 @@
   color: #f1eee7;
 }
 
+.knowledgeReview {
+  display: grid;
+  gap: 18px;
+}
+
+.reviewIntro {
+  max-width: 620px;
+  margin: 0 0 6px;
+  color: #bdb5a6;
+  line-height: 1.55;
+}
+
+.reviewCard {
+  padding: 20px 0;
+  border-top: 1px solid rgba(241, 238, 231, 0.1);
+}
+
+.reviewCard:first-of-type {
+  border-top: 0;
+}
+
+.reviewCard header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: baseline;
+}
+
+.reviewCard h3 {
+  margin: 0;
+  color: #f1eee7;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.reviewCard header p,
+.emptyReview {
+  margin: 0;
+  color: #8f887c;
+  line-height: 1.45;
+}
+
+.stateGroups {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.stateGroup p {
+  margin: 0;
+  color: #c4b17b;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.stateGroup ul {
+  margin: 9px 0 0;
+  padding: 0;
+  color: #cfc4aa;
+  line-height: 1.5;
+  list-style: none;
+}
+
+.stateGroup li + li {
+  margin-top: 5px;
+}
+
+.emptyReview {
+  margin-top: 12px;
+}
+
 @media (max-width: 760px) {
   .page {
     padding: 36px 20px 64px;
@@ -155,5 +228,14 @@
 
   .listGrid {
     grid-template-columns: 1fr;
+  }
+
+  .reviewCard header,
+  .stateGroups {
+    grid-template-columns: 1fr;
+  }
+
+  .reviewCard header {
+    display: grid;
   }
 }

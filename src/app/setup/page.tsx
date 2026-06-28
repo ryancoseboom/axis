@@ -1,10 +1,12 @@
 import { buildUserContextFromSetup, sampleRyanSetup } from "@/axis/setup";
+import { buildSetupKnowledgeReview, type PillarKnowledgeReview } from "@/axis/setupPresentation";
 import styles from "./setup.module.css";
 
 export default function SetupPage() {
   const context = buildUserContextFromSetup(sampleRyanSetup);
   const pillars = context.pillarMemory?.pillars ?? [];
   const programs = context.pillarMemory?.programs ?? [];
+  const knowledgeReview = buildSetupKnowledgeReview(sampleRyanSetup);
 
   return (
     <main className={styles.page}>
@@ -71,6 +73,19 @@ export default function SetupPage() {
           </div>
         </div>
       </section>
+
+      <section className={styles.band} aria-labelledby="knowledge-title">
+        <div>
+          <p className={styles.label}>Knowledge</p>
+          <h2 id="knowledge-title">What Axis thinks you already know</h2>
+        </div>
+        <div className={styles.knowledgeReview}>
+          <p className={styles.reviewIntro}>This is the starting point Axis will reason from. It is not a score, and it is not permanent.</p>
+          {knowledgeReview.map((pillar) => (
+            <KnowledgeReviewCard key={pillar.pillarName} review={pillar} />
+          ))}
+        </div>
+      </section>
     </main>
   );
 }
@@ -85,5 +100,34 @@ function SetupList({ title, items }: { title: string; items: string[] }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+function KnowledgeReviewCard({ review }: { review: PillarKnowledgeReview }) {
+  const contextLine = [review.domainName, review.currentLevel, review.credential].filter(Boolean).join(" / ");
+
+  return (
+    <article className={styles.reviewCard}>
+      <header>
+        <h3>{review.pillarName}</h3>
+        <p>{contextLine}</p>
+      </header>
+      {review.groups.length > 0 ? (
+        <div className={styles.stateGroups}>
+          {review.groups.map((group) => (
+            <div key={group.status} className={styles.stateGroup}>
+              <p>{group.label}</p>
+              <ul>
+                {group.concepts.map((concept) => (
+                  <li key={concept}>{concept}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className={styles.emptyReview}>Axis does not have enough setup evidence here yet.</p>
+      )}
+    </article>
   );
 }
