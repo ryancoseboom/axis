@@ -8,6 +8,7 @@ import {
   type PillarKnowledgeReview,
   type SetupConfirmationSummary
 } from "@/axis/setupPresentation";
+import { confirmSetupForToday } from "@/axis/setupHandoff";
 import styles from "./setup.module.css";
 
 export default function SetupPage() {
@@ -17,6 +18,11 @@ export default function SetupPage() {
   const programs = context.pillarMemory?.programs ?? [];
   const knowledgeReview = buildSetupKnowledgeReview(sampleRyanSetup);
   const confirmationSummary = buildSetupConfirmationSummary(sampleRyanSetup);
+
+  function confirmStartingProfile() {
+    confirmSetupForToday(sampleRyanSetup);
+    setConfirmed(true);
+  }
 
   return (
     <main className={styles.page}>
@@ -106,7 +112,7 @@ export default function SetupPage() {
           {!confirmed ? (
             <>
               <p>This will let Axis reason from this setup in the local shell. Nothing is saved yet.</p>
-              <button className={styles.primaryAction} type="button" onClick={() => setConfirmed(true)}>
+              <button className={styles.primaryAction} type="button" onClick={confirmStartingProfile}>
                 Use this as my starting profile
               </button>
             </>

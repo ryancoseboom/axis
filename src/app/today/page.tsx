@@ -4,12 +4,13 @@ import { FormEvent, useMemo, useState } from "react";
 import { generateToday } from "@/axis/engine";
 import { morningInputToUserContext, parseFocusWindowPhrase, parseMorningLines, type MorningInput } from "@/axis/morningInput";
 import { sampleRyanContext } from "@/axis/sampleRyanContext";
+import { clearConfirmedSetupContext, getConfirmedSetupContext } from "@/axis/setupHandoff";
 import { buildAdjustAlternatives, buildBecausePresentation, type AdjustAlternative } from "@/axis/todayPresentation";
-import type { TimelineItem } from "@/axis/types";
+import type { TimelineItem, UserContext } from "@/axis/types";
 import styles from "./today.module.css";
 
 type TodayMode = "morning" | "now";
-type TodaySource = { kind: "input"; input: MorningInput } | { kind: "demo" };
+type TodaySource = { kind: "input"; input: MorningInput } | { kind: "demo" } | { kind: "setup"; context: UserContext };
 
 type MorningDraft = {
   mainIntention: string;
@@ -27,13 +28,17 @@ export default function TodayPage() {
   const [mode, setMode] = useState<TodayMode>("morning");
   const [showAdjust, setShowAdjust] = useState(false);
   const [preferredDecisionId, setPreferredDecisionId] = useState<string | undefined>();
-  const [source, setSource] = useState<TodaySource | undefined>();
+  const [source, setSource] = useState<TodaySource | undefined>(() => {
+    const setupContext = getConfirmedSetupContext();
+    return setupContext ? { kind: "setup", context: setupContext } : undefined;
+  });
   const [draft, setDraft] = useState<MorningDraft>(emptyDraft);
   const userContext = useMemo(() => {
     if (!source) {
       return undefined;
     }
 
+    if (source.kind === "setup") return source.context;
     return source.kind === "demo" ? sampleRyanContext : morningInputToUserContext(source.input);
   }, [source]);
   const today = useMemo(() => (userContext ? generateToday(userContext, { preferredDecisionId }) : undefined), [userContext, preferredDecisionId]);
@@ -52,16 +57,19 @@ export default function TodayPage() {
 
   function submitMorning(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    clearConfirmedSetupContext();
     resetGeneratedState();
     setSource({ kind: "input", input: draftToMorningInput(draft) });
   }
 
   function useSampleThursday() {
+    clearConfirmedSetupContext();
     resetGeneratedState();
     setSource({ kind: "demo" });
   }
 
   function editInputs() {
+    clearConfirmedSetupContext();
     resetGeneratedState();
     setSource(undefined);
   }
