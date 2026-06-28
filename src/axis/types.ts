@@ -53,36 +53,61 @@ export type PracticeIntensity = "low" | "medium" | "high";
 
 export type PracticeSource = "manual" | "inferred" | "future integration";
 
-export type SkillRelationshipType =
-  | "related_to"
-  | "prerequisite_for"
-  | "reinforces"
-  | "contrasts_with"
-  | "follow_up"
-  | "review_later";
-
-export type PracticeTopic = {
+export type Concept = {
   id: string;
   name: string;
   description: string;
-  domainId: string;
+  aliases?: string[];
+  sourceTopicIds?: string[];
 };
 
-export type SkillRelationship = {
+export type ConceptRelationship =
+  | "related_to"
+  | "prerequisite"
+  | "reinforces"
+  | "reviews"
+  | "part_of"
+  | "alternative_to"
+  | "follow_up"
+  | "contrasts_with";
+
+export type KnowledgeNode = {
   id: string;
-  fromTopicId: string;
-  toTopicId: string;
-  type: SkillRelationshipType;
+  pillarId: string;
+  concept: Concept;
+};
+
+export type KnowledgeEdge = {
+  id: string;
+  fromNodeId: string;
+  toNodeId: string;
+  type: ConceptRelationship;
   description: string;
 };
 
-export type PracticeDomain = {
+export type KnowledgeMap = {
   id: string;
   pillarId: string;
   name: string;
-  description: string;
-  topics: PracticeTopic[];
-  relationships: SkillRelationship[];
+  nodes: KnowledgeNode[];
+  edges: KnowledgeEdge[];
+};
+
+export type KnowledgeNodeStatus =
+  | "never_seen"
+  | "introduced"
+  | "practiced"
+  | "developing"
+  | "confident"
+  | "needs_review";
+
+export type KnowledgeState = {
+  nodeId: string;
+  status: KnowledgeNodeStatus;
+  introducedDate?: string;
+  lastPracticedDate?: string;
+  reviewAfterDate?: string;
+  lastSourceEntryId?: string;
 };
 
 export type Pillar = {
@@ -91,7 +116,7 @@ export type Pillar = {
   description: string;
   priority: number;
   identityWeight: number;
-  domains: PracticeDomain[];
+  knowledgeMap: KnowledgeMap;
   status: PillarStatus;
 };
 
@@ -201,6 +226,7 @@ export type PillarMemory = {
   practiceEntries: PracticeEntry[];
   programs?: Program[];
   completedProgramSessions?: CompletedProgramSession[];
+  knowledgeStates?: KnowledgeState[];
   developmentSignals?: DevelopmentSignal[];
 };
 

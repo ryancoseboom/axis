@@ -1,3 +1,4 @@
+import { applyPracticeEntryToKnowledgeState } from "./knowledgeMaps";
 import type {
   CompletedProgramSession,
   DevelopmentSignal,
@@ -141,9 +142,14 @@ export function completeProgramSession(memory: PillarMemory, input: ProgramSessi
     practiceEntries: [...memory.practiceEntries, practiceEntry],
     completedProgramSessions
   };
-  const developmentSignals = generateProgramDevelopmentSignals(memoryWithCompletion, input.date);
-  const memoryWithSignals: PillarMemory = {
+  const knowledgeStates = applyPracticeEntryToKnowledgeState(memoryWithCompletion, practiceEntry);
+  const memoryWithKnowledge: PillarMemory = {
     ...memoryWithCompletion,
+    knowledgeStates
+  };
+  const developmentSignals = generateProgramDevelopmentSignals(memoryWithKnowledge, input.date);
+  const memoryWithSignals: PillarMemory = {
+    ...memoryWithKnowledge,
     developmentSignals: replaceProgramSignals(memory.developmentSignals ?? [], input.programId, developmentSignals)
   };
 
@@ -228,7 +234,7 @@ function programSessionToPracticeEntry(
     date: session.date,
     title,
     notes: `${session.notes}${movementText}${setsText}`.trim(),
-    topics: programDay ? [programDay.id] : [],
+    topics: programDay ? [programDay.id, ...session.movementsCompleted] : session.movementsCompleted,
     intensity: session.perceivedEffort ?? "medium",
     confidence: session.movementsCompleted.length > 0 ? 7 : 5,
     familiarity: 5,

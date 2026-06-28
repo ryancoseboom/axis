@@ -1,14 +1,17 @@
+import { applyPracticeEntryToKnowledgeState, generateKnowledgeDevelopmentSignals } from "./knowledgeMaps";
 import { generateProgramDevelopmentSignals } from "./programs";
 import type {
   DevelopmentSignal,
+  KnowledgeEdge,
+  KnowledgeMap,
+  KnowledgeNode,
+  KnowledgeState,
   Pillar,
   PillarMemory,
   PracticeEntry,
   PracticeIntensity,
   PracticeSource,
-  PracticeTopic,
-  ReviewSchedule,
-  SkillRelationship
+  ReviewSchedule
 } from "./types";
 
 export type PracticeEntryInput = {
@@ -31,35 +34,25 @@ export const samplePillars: Pillar[] = [
     priority: 8,
     identityWeight: 8,
     status: "active",
-    domains: [
-      {
-        id: "domain-bjj-grappling",
-        pillarId: "pillar-bjj",
-        name: "Grappling",
-        description: "Submission grappling technique, positions, and transitions.",
-        topics: [
-          topic("topic-arm-bar", "domain-bjj-grappling", "arm bar", "Arm isolation and finishing mechanics."),
-          topic("topic-triangle-choke", "domain-bjj-grappling", "triangle choke", "Leg-based choke from guard and transitional attacks."),
-          topic("topic-omoplata", "domain-bjj-grappling", "omoplata", "Shoulder lock and sweeping threat from guard."),
-          topic("topic-closed-guard", "domain-bjj-grappling", "closed guard", "Control position for breaking posture and attacking."),
-          topic("topic-guard-retention", "domain-bjj-grappling", "guard retention", "Keeping frames and hip position under pressure."),
-          topic("topic-back-takes", "domain-bjj-grappling", "back takes", "Routes to back control and finishing positions."),
-          topic("topic-escapes", "domain-bjj-grappling", "escapes", "Defensive movement from bad positions.")
-        ],
-        relationships: [
-          relationship("rel-armbar-triangle", "topic-arm-bar", "topic-triangle-choke", "related_to", "Arm bars and triangle chokes share guard entries and posture-breaking mechanics."),
-          relationship("rel-armbar-omoplata", "topic-arm-bar", "topic-omoplata", "related_to", "Omoplatas pair naturally with arm bar defenses and shoulder exposure."),
-          relationship("rel-closed-guard-armbar", "topic-closed-guard", "topic-arm-bar", "prerequisite_for", "Closed guard control creates reliable arm bar entries."),
-          relationship("rel-armbar-closed-guard", "topic-arm-bar", "topic-closed-guard", "reinforces", "Arm bar practice reinforces closed guard attacks."),
-          relationship("rel-armbar-finishing", "topic-arm-bar", "topic-arm-bar", "review_later", "Arm bar finishing mechanics should be revisited after initial training."),
-          relationship("rel-guard-retention-escapes", "topic-guard-retention", "topic-escapes", "related_to", "Retention and escapes share defensive timing and frames.")
-        ]
-      }
-    ]
+    knowledgeMap: knowledgeMap("knowledge-map-bjj", "pillar-bjj", "BJJ Knowledge Map", [
+      knowledgeNode("knowledge-bjj-closed-guard", "pillar-bjj", "Closed Guard", "Control position for posture breaking, attacks, and transitions.", ["topic-closed-guard"]),
+      knowledgeNode("knowledge-bjj-arm-bar", "pillar-bjj", "Arm Bar", "Arm isolation and finishing mechanics.", ["topic-arm-bar"]),
+      knowledgeNode("knowledge-bjj-triangle", "pillar-bjj", "Triangle", "Leg-based choke connected to guard attacks.", ["topic-triangle-choke"]),
+      knowledgeNode("knowledge-bjj-omoplata", "pillar-bjj", "Omoplata", "Shoulder lock and sweeping threat from guard.", ["topic-omoplata"]),
+      knowledgeNode("knowledge-bjj-guard-retention", "pillar-bjj", "Guard Retention", "Frames, hip movement, and recovery under passing pressure.", ["topic-guard-retention"]),
+      knowledgeNode("knowledge-bjj-back-takes", "pillar-bjj", "Back Takes", "Routes to back control and finishing positions.", ["topic-back-takes"])
+    ], [
+      knowledgeEdge("knowledge-rel-closed-guard-arm-bar", "knowledge-bjj-closed-guard", "knowledge-bjj-arm-bar", "prerequisite", "Closed Guard creates reliable Arm Bar entries."),
+      knowledgeEdge("knowledge-rel-arm-bar-triangle", "knowledge-bjj-arm-bar", "knowledge-bjj-triangle", "related_to", "Arm Bar and Triangle share posture-breaking mechanics."),
+      knowledgeEdge("knowledge-rel-arm-bar-omoplata", "knowledge-bjj-arm-bar", "knowledge-bjj-omoplata", "alternative_to", "Omoplata follows common Arm Bar defenses."),
+      knowledgeEdge("knowledge-rel-arm-bar-closed-guard", "knowledge-bjj-arm-bar", "knowledge-bjj-closed-guard", "reinforces", "Arm Bar practice reinforces Closed Guard control."),
+      knowledgeEdge("knowledge-rel-arm-bar-review", "knowledge-bjj-arm-bar", "knowledge-bjj-arm-bar", "reviews", "Arm Bar finishing mechanics should be revisited after practice."),
+      knowledgeEdge("knowledge-rel-guard-retention-back-takes", "knowledge-bjj-guard-retention", "knowledge-bjj-back-takes", "follow_up", "Retaining guard creates chances to recover angle and attack the back.")
+    ])
   },
-  pillar("pillar-axis", "Axis", "Build the reasoning engine and product philosophy.", 10),
+  pillar("pillar-axis", "Axis", "Build the reasoning engine and product philosophy.", 10, axisKnowledgeMap()),
   pillar("pillar-music", "Music", "Write, record, and deepen musical craft.", 8),
-  pillar("pillar-health", "Health", "Protect vitality, strength, and recovery.", 7),
+  pillar("pillar-health", "Health", "Protect vitality, strength, and recovery.", 7, healthKnowledgeMap()),
   pillar("pillar-porthos", "Porthos", "Care, relationship, and daily steadiness with Porthos.", 7)
 ];
 
@@ -91,16 +84,30 @@ export function recordPracticeEntry(input: PracticeEntryInput, existingEntries: 
   };
 }
 
+export function recordPracticeEntryInMemory(memory: PillarMemory, input: PracticeEntryInput): PillarMemory {
+  const entry = recordPracticeEntry(input, memory.practiceEntries);
+  const memoryWithEntry: PillarMemory = {
+    ...memory,
+    practiceEntries: [...memory.practiceEntries, entry]
+  };
+
+  return {
+    ...memoryWithEntry,
+    knowledgeStates: applyPracticeEntryToKnowledgeState(memoryWithEntry, entry)
+  };
+}
+
 export function generateDevelopmentSignals(memory: PillarMemory, today: string): DevelopmentSignal[] {
   const signals: DevelopmentSignal[] = [];
   const entries = [...memory.practiceEntries].sort((a, b) => b.date.localeCompare(a.date));
-
-  for (const entry of entries.slice(0, 8)) {
-    signals.push(...relatedTechniqueSignals(memory.pillars, entry));
-    signals.push(...reviewSignals(memory.pillars, entry, today));
-  }
+  const chronologicalEntries = [...memory.practiceEntries].sort((a, b) => a.date.localeCompare(b.date));
+  const memoryWithKnowledge = {
+    ...memory,
+    knowledgeStates: memory.knowledgeStates ?? chronologicalEntries.reduce<KnowledgeState[]>((states, entry) => applyPracticeEntryToKnowledgeState({ ...memory, knowledgeStates: states }, entry), [])
+  };
 
   signals.push(...neglectedPillarSignals(memory.pillars, entries, today));
+  signals.push(...generateKnowledgeDevelopmentSignals(memoryWithKnowledge, today));
   signals.push(...generateProgramDevelopmentSignals(memory, today));
 
   return uniqueSignals(signals).sort((a, b) => b.priority - a.priority);
@@ -120,54 +127,6 @@ export function buildReviewSchedule(entry: PracticeEntry, today: string): Review
   });
 }
 
-function relatedTechniqueSignals(pillars: Pillar[], entry: PracticeEntry): DevelopmentSignal[] {
-  const pillarItem = findPillar(pillars, entry.pillarId);
-  if (!pillarItem) return [];
-
-  return relationshipsFor(pillarItem, entry.topics)
-    .filter((item) => item.type === "related_to" || item.type === "follow_up" || item.type === "reinforces")
-    .filter((item) => !entry.topics.includes(item.toTopicId) || item.type === "reinforces")
-    .slice(0, 2)
-    .map((item) => {
-      const target = findTopic(pillarItem, item.toTopicId);
-      return {
-        id: `signal-related-${entry.id}-${item.toTopicId}`,
-        type: item.type === "reinforces" ? "deepen_topic" : "related_technique",
-        pillarId: pillarItem.id,
-        title: item.type === "reinforces" ? `Deepen ${target?.name ?? "the thread"}` : `Train ${target?.name ?? "a related topic"}`,
-        description: item.description,
-        topicIds: [item.fromTopicId, item.toTopicId],
-        priority: pillarItem.priority + 1,
-        sourceEntryId: entry.id,
-        protects: pillarItem.name
-      } satisfies DevelopmentSignal;
-    });
-}
-
-function reviewSignals(pillars: Pillar[], entry: PracticeEntry, today: string): DevelopmentSignal[] {
-  const pillarItem = findPillar(pillars, entry.pillarId);
-  if (!pillarItem) return [];
-
-  return buildReviewSchedule(entry, today)
-    .filter((schedule) => today >= schedule.firstReviewDate)
-    .map((schedule) => {
-      const topicItem = findTopic(pillarItem, schedule.topicId);
-      const overdue = today > schedule.secondReviewDate;
-      return {
-        id: `${overdue ? "signal-overdue" : "signal-review"}-${entry.id}-${schedule.topicId}`,
-        type: overdue ? "overdue_review" : "review",
-        pillarId: pillarItem.id,
-        title: overdue ? `Review overdue ${topicItem?.name ?? "practice"}` : `Review ${topicItem?.name ?? "practice"}`,
-        description: overdue ? "This topic is past its second review window." : "This topic is ready for a short retention review.",
-        topicIds: [schedule.topicId],
-        priority: overdue ? pillarItem.priority + 3 : pillarItem.priority,
-        dueDate: overdue ? schedule.secondReviewDate : schedule.firstReviewDate,
-        sourceEntryId: entry.id,
-        protects: pillarItem.name
-      } satisfies DevelopmentSignal;
-    });
-}
-
 function neglectedPillarSignals(pillars: Pillar[], entries: PracticeEntry[], today: string): DevelopmentSignal[] {
   return pillars
     .filter((pillarItem) => pillarItem.status === "active")
@@ -184,28 +143,57 @@ function neglectedPillarSignals(pillars: Pillar[], entries: PracticeEntry[], tod
     }));
 }
 
-function pillar(id: string, name: string, description: string, priority: number): Pillar {
-  return { id, name, description, priority, identityWeight: priority, status: "active", domains: [] };
+function pillar(id: string, name: string, description: string, priority: number, map = emptyKnowledgeMap(id, name)): Pillar {
+  return { id, name, description, priority, identityWeight: priority, status: "active", knowledgeMap: map };
 }
 
-function topic(id: string, domainId: string, name: string, description: string): PracticeTopic {
-  return { id, domainId, name, description };
+function knowledgeMap(id: string, pillarId: string, name: string, nodes: KnowledgeNode[], edges: KnowledgeEdge[]): KnowledgeMap {
+  return { id, pillarId, name, nodes, edges };
 }
 
-function relationship(id: string, fromTopicId: string, toTopicId: string, type: SkillRelationship["type"], description: string): SkillRelationship {
-  return { id, fromTopicId, toTopicId, type, description };
+function knowledgeNode(id: string, pillarId: string, name: string, description: string, sourceTopicIds: string[] = [], aliases: string[] = []): KnowledgeNode {
+  return { id, pillarId, concept: { id: `concept-${id}`, name, description, sourceTopicIds, aliases } };
 }
 
-function relationshipsFor(pillarItem: Pillar, topicIds: string[]): SkillRelationship[] {
-  return pillarItem.domains.flatMap((domain) => domain.relationships).filter((item) => topicIds.includes(item.fromTopicId));
+function knowledgeEdge(id: string, fromNodeId: string, toNodeId: string, type: KnowledgeEdge["type"], description: string): KnowledgeEdge {
+  return { id, fromNodeId, toNodeId, type, description };
 }
 
-function findPillar(pillars: Pillar[], pillarId: string): Pillar | undefined {
-  return pillars.find((pillarItem) => pillarItem.id === pillarId);
+function emptyKnowledgeMap(pillarId: string, name: string): KnowledgeMap {
+  return knowledgeMap(`knowledge-map-${slug(pillarId)}`, pillarId, `${name} Knowledge Map`, [], []);
 }
 
-function findTopic(pillarItem: Pillar, topicId: string): PracticeTopic | undefined {
-  return pillarItem.domains.flatMap((domain) => domain.topics).find((topicItem) => topicItem.id === topicId);
+function axisKnowledgeMap(): KnowledgeMap {
+  return knowledgeMap("knowledge-map-axis", "pillar-axis", "Axis Knowledge Map", [
+    knowledgeNode("knowledge-axis-decision-graph", "pillar-axis", "Decision Graph", "The deterministic graph that turns facts into explainable decisions.", [], ["decision graph"]),
+    knowledgeNode("knowledge-axis-explainability", "pillar-axis", "Explainability", "Clear reasons and paths for every selected output.", [], ["explainability"]),
+    knowledgeNode("knowledge-axis-confidence", "pillar-axis", "Confidence", "Calibrated trust in a generated plan.", [], ["confidence"]),
+    knowledgeNode("knowledge-axis-calendar", "pillar-axis", "Calendar", "Provider-agnostic time and commitment context.", [], ["calendar"]),
+    knowledgeNode("knowledge-axis-identity", "pillar-axis", "Identity", "The values and priorities protected by Axis.", [], ["identity"])
+  ], [
+    knowledgeEdge("knowledge-rel-decision-graph-explainability", "knowledge-axis-decision-graph", "knowledge-axis-explainability", "part_of", "Explainability exposes why the Decision Graph chose an output."),
+    knowledgeEdge("knowledge-rel-confidence-explainability", "knowledge-axis-confidence", "knowledge-axis-explainability", "reinforces", "Confidence becomes more useful when the explanation is visible."),
+    knowledgeEdge("knowledge-rel-calendar-decision-graph", "knowledge-axis-calendar", "knowledge-axis-decision-graph", "reinforces", "Calendar facts improve Decision Graph context fit."),
+    knowledgeEdge("knowledge-rel-identity-decision-graph", "knowledge-axis-identity", "knowledge-axis-decision-graph", "prerequisite", "Identity gives the Decision Graph something to protect.")
+  ]);
+}
+
+function healthKnowledgeMap(): KnowledgeMap {
+  return knowledgeMap("knowledge-map-health", "pillar-health", "Weightlifting Knowledge Map", [
+    knowledgeNode("knowledge-lift-pull", "pillar-health", "Pull", "Pulling patterns for back and arm development.", ["program-day-pull-biceps", "program-day-pull-back"], ["pull"]),
+    knowledgeNode("knowledge-lift-push", "pillar-health", "Push", "Pressing patterns for chest and shoulder development.", ["program-day-push-chest", "program-day-push-shoulders"], ["push"]),
+    knowledgeNode("knowledge-lift-chest", "pillar-health", "Chest", "Chest-focused pressing and fly work.", ["program-day-push-chest"], ["chest"]),
+    knowledgeNode("knowledge-lift-back", "pillar-health", "Back", "Back-focused rowing and pulldown work.", ["program-day-pull-back"], ["back"]),
+    knowledgeNode("knowledge-lift-biceps", "pillar-health", "Biceps", "Curling and elbow-flexion strength.", ["program-day-pull-biceps"], ["biceps"]),
+    knowledgeNode("knowledge-lift-squat", "pillar-health", "Squat", "Knee-dominant lower-body strength.", ["program-day-legs"], ["squat", "smith squat"]),
+    knowledgeNode("knowledge-lift-cable-row", "pillar-health", "Cable Row", "Horizontal pull for mid-back and lat development.", ["movement-seated-cable-row"], ["seated cable row", "cable row"])
+  ], [
+    knowledgeEdge("knowledge-rel-pull-biceps", "knowledge-lift-pull", "knowledge-lift-biceps", "part_of", "Biceps work is part of the Pull pattern."),
+    knowledgeEdge("knowledge-rel-pull-back", "knowledge-lift-pull", "knowledge-lift-back", "part_of", "Back work is part of the Pull pattern."),
+    knowledgeEdge("knowledge-rel-back-cable-row", "knowledge-lift-back", "knowledge-lift-cable-row", "follow_up", "Cable Row is a concrete follow-up for Back development."),
+    knowledgeEdge("knowledge-rel-push-chest", "knowledge-lift-push", "knowledge-lift-chest", "part_of", "Chest work is part of the Push pattern."),
+    knowledgeEdge("knowledge-rel-squat-push", "knowledge-lift-squat", "knowledge-lift-push", "contrasts_with", "Squat and Push stress different movement patterns.")
+  ]);
 }
 
 function uniqueSignals(signals: DevelopmentSignal[]): DevelopmentSignal[] {

@@ -38,34 +38,42 @@ test("practice entries are recorded", () => {
   assert.deepEqual(entry.topics, ["topic-arm-bar"]);
 });
 
+test("Pillars no longer carry legacy SkillRelationship domains", () => {
+  assert.ok(samplePillars.every((pillar) => !Object.hasOwn(pillar, "domains")));
+  assert.ok(samplePillars.every((pillar) => Object.hasOwn(pillar, "knowledgeMap")));
+});
+
 test("BJJ arm bar entry creates related triangle choke signal", () => {
   const memory = bjjArmBarMemory();
   const signals = generateDevelopmentSignals(memory, "2026-06-27");
-  const triangle = signals.find((signal) => signal.title === "Train triangle choke");
+  const triangle = signals.find((signal) => signal.title === "Train Triangle");
 
   assert.ok(triangle);
+  assert.ok(triangle.id.startsWith("signal-knowledge-"));
   assert.equal(triangle.pillarId, "pillar-bjj");
   assert.equal(triangle.type, "related_technique");
-  assert.ok(triangle.topicIds.includes("topic-triangle-choke"));
+  assert.ok(triangle.topicIds.includes("knowledge-bjj-triangle"));
 });
 
 test("arm bar creates future review signal", () => {
   const memory = bjjArmBarMemory("2026-06-25");
   const signals = generateDevelopmentSignals(memory, "2026-06-27");
-  const review = signals.find((signal) => signal.type === "review" && signal.topicIds.includes("topic-arm-bar"));
+  const review = signals.find((signal) => signal.type === "review" && signal.topicIds.includes("knowledge-bjj-arm-bar"));
 
   assert.ok(review);
-  assert.equal(review.title, "Review arm bar");
+  assert.ok(review.id.startsWith("signal-knowledge-"));
+  assert.equal(review.title, "Review Arm Bar");
   assert.equal(review.dueDate, "2026-06-27");
 });
 
 test("overdue review is detected", () => {
   const memory = bjjArmBarMemory("2026-06-01");
   const signals = generateDevelopmentSignals(memory, "2026-06-20");
-  const overdue = signals.find((signal) => signal.type === "overdue_review" && signal.topicIds.includes("topic-arm-bar"));
+  const overdue = signals.find((signal) => signal.type === "overdue_review" && signal.topicIds.includes("knowledge-bjj-arm-bar"));
 
   assert.ok(overdue);
-  assert.equal(overdue.title, "Review overdue arm bar");
+  assert.ok(overdue.id.startsWith("signal-knowledge-"));
+  assert.equal(overdue.title, "Review overdue Arm Bar");
 });
 
 test("review schedule includes two simple review windows", () => {
@@ -92,8 +100,8 @@ test("DevelopmentSignals enter the Decision Graph as opportunities", () => {
   };
   const today = generateToday(context);
 
-  assert.ok(today.candidateDecisions.some((candidate) => candidate.title === "Train triangle choke"));
-  assert.ok(today.decisionGraph.nodes.some((node) => node.id.includes("opportunity-development-signal-related")));
+  assert.ok(today.candidateDecisions.some((candidate) => candidate.title === "Train Triangle"));
+  assert.ok(today.decisionGraph.nodes.some((node) => node.id.includes("opportunity-development-signal-knowledge")));
 });
 
 test("Today can be generated using pillar signals", () => {
