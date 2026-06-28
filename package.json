@@ -1,0 +1,1 @@
+{"name":"axis","version":"0.0.0","private":true,"scripts":{"dev":"next dev","build":"next build","typecheck":"tsc --noEmit","test":"tsx --test src/axis/*.test.ts"},"dependencies":{"next":"^15.0.0","react":"^19.0.0","react-dom":"^19.0.0"},"devDependencies":{"@types/node":"^22.0.0","@types/react":"^19.0.0","@types/react-dom":"^19.0.0","tsx":"^4.22.4","typescript":"^5.0.0"}}
