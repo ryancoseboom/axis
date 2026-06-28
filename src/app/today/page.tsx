@@ -4,7 +4,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { generateToday } from "@/axis/engine";
 import { morningInputToUserContext, parseFocusWindowPhrase, parseMorningLines, type MorningInput } from "@/axis/morningInput";
 import { sampleRyanContext } from "@/axis/sampleRyanContext";
-import { clearConfirmedSetupContext, getConfirmedSetupContext } from "@/axis/setupHandoff";
+import { clearConfirmedSetupContext, getConfirmedSetupContext, setupContextIndicatorText } from "@/axis/setupHandoff";
 import { buildAdjustAlternatives, buildBecausePresentation, type AdjustAlternative } from "@/axis/todayPresentation";
 import type { TimelineItem, UserContext } from "@/axis/types";
 import styles from "./today.module.css";
@@ -44,6 +44,7 @@ export default function TodayPage() {
   const today = useMemo(() => (userContext ? generateToday(userContext, { preferredDecisionId }) : undefined), [userContext, preferredDecisionId]);
   const because = useMemo(() => (today ? buildBecausePresentation(today) : undefined), [today]);
   const adjustAlternatives = useMemo(() => (today ? buildAdjustAlternatives(today) : []), [today]);
+  const setupContextIndicator = source?.kind === "setup" ? setupContextIndicatorText(source.context) : undefined;
 
   function updateDraft(field: keyof MorningDraft, value: string) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -144,10 +145,11 @@ export default function TodayPage() {
         <div className={styles.headerRow}>
           <p className={styles.kicker}>Today</p>
           <button className={styles.editInputsButton} type="button" onClick={editInputs}>
-            Edit inputs
+            {setupContextIndicator ? "Use Morning input instead" : "Edit inputs"}
           </button>
         </div>
         <h1 id="today-title">{today.theme}</h1>
+        {setupContextIndicator ? <p className={styles.contextNote}>{setupContextIndicator}</p> : null}
       </section>
 
       <section className={styles.now} aria-labelledby="now-title">

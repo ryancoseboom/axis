@@ -17,6 +17,10 @@ export function getConfirmedSetupContext(): UserContext | undefined {
   return confirmedSetupContext;
 }
 
+export function setupContextIndicatorText(context: UserContext | undefined = confirmedSetupContext): string | undefined {
+  return context ? "Reasoning from your confirmed profile" : undefined;
+}
+
 export function clearConfirmedSetupContext(): void {
   confirmedSetupContext = undefined;
 }

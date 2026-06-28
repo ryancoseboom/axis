@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { buildUserContextFromSetup, sampleRyanSetup } from "@/axis/setup";
 import {
@@ -171,13 +172,13 @@ function ConfirmationSummary({ summary }: { summary: SetupConfirmationSummary })
   return (
     <div className={styles.confirmedState}>
       <div>
-        <p className={styles.confirmedEyebrow}>Starting profile confirmed locally</p>
+        <p className={styles.confirmedEyebrow}>Starting profile is ready</p>
         <p className={styles.identityLine}>{summary.identityStatement}</p>
       </div>
 
       <div className={styles.confirmationGrid}>
         <ConfirmationList title="Active pillars" items={summary.activePillars.map((pillar) => pillar.pillarName)} />
-        <ConfirmationList title="Attached domain models" items={summary.attachedDomains.map((domain) => `${domain.domainName} for ${domain.pillarName}`)} />
+        <ConfirmationList title="Domains Axis will use" items={summary.attachedDomains.map((domain) => `${domain.domainName} for ${domain.pillarName}`)} />
         <ConfirmationList
           title="Programs and routines"
           items={[
@@ -191,7 +192,7 @@ function ConfirmationSummary({ summary }: { summary: SetupConfirmationSummary })
         />
       </div>
 
-      <a className={styles.todayLink} href="/today">Continue to Today</a>
+      <Link className={styles.todayLink} href="/today">Continue to Today</Link>
     </div>
   );
 }
