@@ -1,5 +1,5 @@
 import { buildUserContextFromSetup, type BuildUserContextFromSetupOptions, type SetupState } from "./setup";
-import type { KnowledgeNodeStatus, Pillar, UserContext } from "./types";
+import type { KnowledgeNodeStatus, Pillar, Program, UserContext } from "./types";
 
 export type KnowledgeStateSummaryGroup = {
   status: KnowledgeNodeStatus;
@@ -14,6 +14,41 @@ export type PillarKnowledgeReview = {
   currentLevel?: string;
   credential?: string;
   groups: KnowledgeStateSummaryGroup[];
+};
+
+export type SetupConfirmationPillarSummary = {
+  pillarName: string;
+  domainName: string;
+  knowledgeMapName: string;
+};
+
+export type SetupConfirmationProgramSummary = {
+  name: string;
+  pillarName: string;
+  cadence?: string;
+  dayCount: number;
+};
+
+export type SetupConfirmationRoutineSummary = {
+  name: string;
+  pillarName: string;
+  cadence: string;
+};
+
+export type SetupConfirmationCalendarSummary = {
+  preferredProvider: string;
+  importStatus: string;
+  dayStart?: string;
+  dayEnd?: string;
+};
+
+export type SetupConfirmationSummary = {
+  identityStatement: string;
+  activePillars: SetupConfirmationPillarSummary[];
+  attachedDomains: SetupConfirmationPillarSummary[];
+  activePrograms: SetupConfirmationProgramSummary[];
+  activeRoutines: SetupConfirmationRoutineSummary[];
+  calendar: SetupConfirmationCalendarSummary;
 };
 
 const DISPLAYED_STATES: KnowledgeNodeStatus[] = ["confident", "practiced", "developing", "introduced", "needs_review"];
@@ -42,6 +77,35 @@ export function buildKnowledgeStateSummary(context: UserContext, setup?: SetupSt
   });
 }
 
+export function buildSetupConfirmationSummary(setup: SetupState, options: BuildUserContextFromSetupOptions = {}): SetupConfirmationSummary {
+  const context = buildUserContextFromSetup(setup, options);
+  const pillars = context.pillarMemory?.pillars ?? [];
+  const programs = context.pillarMemory?.programs ?? [];
+  const activePillars = pillars
+    .filter((pillar) => pillar.status === "active")
+    .map((pillar) => pillarConfirmationSummary(pillar, setup));
+
+  return {
+    identityStatement: setup.identityProfile.desiredIdentityStatement,
+    activePillars,
+    attachedDomains: activePillars,
+    activePrograms: programs
+      .filter((program) => program.status === "active")
+      .map((program) => programConfirmationSummary(program, pillars, setup)),
+    activeRoutines: (setup.routines ?? []).map((routine) => ({
+      name: routine.name,
+      pillarName: routine.pillarName,
+      cadence: routine.cadence
+    })),
+    calendar: {
+      preferredProvider: setup.calendar.preferredProvider,
+      importStatus: setup.calendar.importStatus,
+      dayStart: setup.calendar.dayStart,
+      dayEnd: setup.calendar.dayEnd
+    }
+  };
+}
+
 function groupForStatus(pillar: Pillar, states: NonNullable<UserContext["pillarMemory"]>["knowledgeStates"], status: KnowledgeNodeStatus, limit: number): KnowledgeStateSummaryGroup {
   const concepts = (states ?? [])
     .filter((state) => state.status === status)
@@ -54,6 +118,28 @@ function groupForStatus(pillar: Pillar, states: NonNullable<UserContext["pillarM
     label: labelForStatus(status),
     concepts: concepts.slice(0, limit),
     totalCount: concepts.length
+  };
+}
+
+function pillarConfirmationSummary(pillar: Pillar, setup: SetupState): SetupConfirmationPillarSummary {
+  const setupPillar = setup.pillars.find((item) => normalize(item.name) === normalize(pillar.name));
+
+  return {
+    pillarName: pillar.name,
+    domainName: setupPillar?.domainProfile?.domainName ?? domainNameFromPillar(pillar),
+    knowledgeMapName: pillar.knowledgeMap.name
+  };
+}
+
+function programConfirmationSummary(program: Program, pillars: Pillar[], setup: SetupState): SetupConfirmationProgramSummary {
+  const pillar = pillars.find((item) => item.id === program.pillarId);
+  const setupProgram = setup.programs?.find((item) => normalize(item.name) === normalize(program.name));
+
+  return {
+    name: program.name,
+    pillarName: pillar?.name ?? setupProgram?.pillarName ?? program.pillarId,
+    cadence: setupProgram?.cadence,
+    dayCount: program.days.length
   };
 }
 

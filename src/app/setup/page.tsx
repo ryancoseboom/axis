@@ -1,12 +1,22 @@
+"use client";
+
+import { useState } from "react";
 import { buildUserContextFromSetup, sampleRyanSetup } from "@/axis/setup";
-import { buildSetupKnowledgeReview, type PillarKnowledgeReview } from "@/axis/setupPresentation";
+import {
+  buildSetupConfirmationSummary,
+  buildSetupKnowledgeReview,
+  type PillarKnowledgeReview,
+  type SetupConfirmationSummary
+} from "@/axis/setupPresentation";
 import styles from "./setup.module.css";
 
 export default function SetupPage() {
+  const [confirmed, setConfirmed] = useState(false);
   const context = buildUserContextFromSetup(sampleRyanSetup);
   const pillars = context.pillarMemory?.pillars ?? [];
   const programs = context.pillarMemory?.programs ?? [];
   const knowledgeReview = buildSetupKnowledgeReview(sampleRyanSetup);
+  const confirmationSummary = buildSetupConfirmationSummary(sampleRyanSetup);
 
   return (
     <main className={styles.page}>
@@ -86,6 +96,25 @@ export default function SetupPage() {
           ))}
         </div>
       </section>
+
+      <section className={styles.confirmationBand} aria-labelledby="confirmation-title">
+        <div>
+          <p className={styles.label}>Confirm</p>
+          <h2 id="confirmation-title">Set this as the starting profile</h2>
+        </div>
+        <div className={styles.confirmationPanel}>
+          {!confirmed ? (
+            <>
+              <p>This will let Axis reason from this setup in the local shell. Nothing is saved yet.</p>
+              <button className={styles.primaryAction} type="button" onClick={() => setConfirmed(true)}>
+                Use this as my starting profile
+              </button>
+            </>
+          ) : (
+            <ConfirmationSummary summary={confirmationSummary} />
+          )}
+        </div>
+      </section>
     </main>
   );
 }
@@ -129,5 +158,51 @@ function KnowledgeReviewCard({ review }: { review: PillarKnowledgeReview }) {
         <p className={styles.emptyReview}>Axis does not have enough setup evidence here yet.</p>
       )}
     </article>
+  );
+}
+
+function ConfirmationSummary({ summary }: { summary: SetupConfirmationSummary }) {
+  return (
+    <div className={styles.confirmedState}>
+      <div>
+        <p className={styles.confirmedEyebrow}>Starting profile confirmed locally</p>
+        <p className={styles.identityLine}>{summary.identityStatement}</p>
+      </div>
+
+      <div className={styles.confirmationGrid}>
+        <ConfirmationList title="Active pillars" items={summary.activePillars.map((pillar) => pillar.pillarName)} />
+        <ConfirmationList title="Attached domain models" items={summary.attachedDomains.map((domain) => `${domain.domainName} for ${domain.pillarName}`)} />
+        <ConfirmationList
+          title="Programs and routines"
+          items={[
+            ...summary.activePrograms.map((program) => [program.name, program.cadence].filter(Boolean).join(" / ")),
+            ...summary.activeRoutines.map((routine) => `${routine.name} / ${routine.cadence}`)
+          ]}
+        />
+        <ConfirmationList
+          title="Calendar"
+          items={[`${summary.calendar.preferredProvider} / ${summary.calendar.importStatus}`]}
+        />
+      </div>
+
+      <a className={styles.todayLink} href="/today">Continue to Today</a>
+    </div>
+  );
+}
+
+function ConfirmationList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className={styles.confirmationList}>
+      <h3>{title}</h3>
+      {items.length > 0 ? (
+        <ul>
+          {items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      ) : (
+        <p>Nothing active yet.</p>
+      )}
+    </div>
   );
 }

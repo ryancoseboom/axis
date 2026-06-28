@@ -52,8 +52,27 @@
   border-top: 1px solid rgba(196, 177, 123, 0.34);
 }
 
+.confirmationBand {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 42px;
+  padding: 36px 0;
+  border-top: 1px solid rgba(196, 177, 123, 0.34);
+  border-bottom: 1px solid rgba(196, 177, 123, 0.34);
+}
+
 .band h2 {
   font-size: 1.55rem;
+  line-height: 1.16;
+}
+
+.confirmationBand h2 {
+  margin: 14px 0 0;
+  color: #f7f1e6;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.55rem;
+  font-weight: 400;
+  letter-spacing: 0;
   line-height: 1.16;
 }
 
@@ -216,12 +235,111 @@
   margin-top: 12px;
 }
 
+.confirmationPanel {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.confirmationPanel > p {
+  max-width: 600px;
+  margin: 0;
+  color: #bdb5a6;
+  line-height: 1.55;
+}
+
+.primaryAction {
+  width: fit-content;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid rgba(196, 177, 123, 0.72);
+  border-radius: 6px;
+  background: rgba(196, 177, 123, 0.14);
+  color: #f7f1e6;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primaryAction:hover,
+.primaryAction:focus-visible {
+  border-color: #cfc4aa;
+  background: rgba(196, 177, 123, 0.22);
+  outline: none;
+}
+
+.confirmedState {
+  display: grid;
+  gap: 22px;
+}
+
+.confirmedEyebrow {
+  margin: 0;
+  color: #c4b17b;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.identityLine {
+  max-width: 680px;
+  margin: 8px 0 0;
+  color: #f1eee7;
+  font-size: 1.08rem;
+  line-height: 1.55;
+}
+
+.confirmationGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 28px;
+}
+
+.confirmationList {
+  padding-top: 14px;
+  border-top: 1px solid rgba(241, 238, 231, 0.1);
+}
+
+.confirmationList h3 {
+  margin: 0;
+  color: #f1eee7;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.confirmationList ul,
+.confirmationList p {
+  margin: 9px 0 0;
+  padding: 0;
+  color: #bdb5a6;
+  line-height: 1.5;
+  list-style: none;
+}
+
+.confirmationList li + li {
+  margin-top: 5px;
+}
+
+.todayLink {
+  width: fit-content;
+  color: #f7f1e6;
+  text-decoration-color: rgba(196, 177, 123, 0.7);
+  text-underline-offset: 4px;
+}
+
+.todayLink:hover,
+.todayLink:focus-visible {
+  color: #c4b17b;
+  outline: none;
+}
+
 @media (max-width: 760px) {
   .page {
     padding: 36px 20px 64px;
   }
 
   .band,
+  .confirmationBand,
   .pillar {
     grid-template-columns: 1fr;
   }
@@ -231,7 +349,8 @@
   }
 
   .reviewCard header,
-  .stateGroups {
+  .stateGroups,
+  .confirmationGrid {
     grid-template-columns: 1fr;
   }
 
