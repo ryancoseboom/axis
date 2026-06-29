@@ -286,17 +286,21 @@
   line-height: 1.2;
 }
 
-.adjustButton {
+.adjustButton,
+.nowCapturedLink {
   padding: 0;
   color: #8f887c;
   font-size: 0.92rem;
   line-height: 1.4;
+  text-decoration: none;
 }
 
 .doneButton:hover,
 .doneButton:focus-visible,
 .adjustButton:hover,
-.adjustButton:focus-visible {
+.adjustButton:focus-visible,
+.nowCapturedLink:hover,
+.nowCapturedLink:focus-visible {
   color: #fff8e8;
   outline: 0;
 }

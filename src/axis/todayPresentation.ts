@@ -17,7 +17,7 @@ export type AdjustAlternative = {
 export type TodayCapturedLink = {
   label: string;
   href: "/dev/captured";
-  placement: "today_header";
+  placement: "today_header" | "now_actions";
 };
 
 export function buildBecausePresentation(today: GeneratedToday): BecausePresentation {
@@ -31,14 +31,10 @@ export function buildBecausePresentation(today: GeneratedToday): BecausePresenta
 }
 
 export function buildTodayCapturedLink(mode: "today" | "now" = "today"): TodayCapturedLink | undefined {
-  if (mode === "now") {
-    return undefined;
-  }
-
   return {
     label: "Capture what happened",
     href: "/dev/captured",
-    placement: "today_header"
+    placement: mode === "now" ? "now_actions" : "today_header"
   };
 }
 

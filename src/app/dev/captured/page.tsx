@@ -44,7 +44,8 @@ export default function CapturedDevPage() {
       <section className={styles.header} aria-labelledby="captured-title">
         <p className={styles.kicker}>Dev / Today Captured</p>
         <h1 id="captured-title">Record what actually happened.</h1>
-        <p>This local shell updates the in-memory context only. A refresh clears it.</p>
+        <p>This local shell updates the browser-local context for testing. You can clear it from Setup.</p>
+        <Link className={styles.headerLink} href="/today">Return to Today</Link>
       </section>
 
       <section className={styles.captureBand} aria-labelledby="observations-title">

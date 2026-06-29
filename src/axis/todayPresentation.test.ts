@@ -61,6 +61,10 @@ test("Today Captured link points to dev capture shell", () => {
   assert.equal(link?.placement, "today_header");
 });
 
-test("Now mode remains minimal without capture link", () => {
-  assert.equal(buildTodayCapturedLink("now"), undefined);
+test("Now mode uses the quiet capture link placement", () => {
+  const link = buildTodayCapturedLink("now");
+
+  assert.equal(link?.label, "Capture what happened");
+  assert.equal(link?.href, "/dev/captured");
+  assert.equal(link?.placement, "now_actions");
 });

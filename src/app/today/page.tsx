@@ -48,6 +48,7 @@ export default function TodayPage() {
   const adjustAlternatives = useMemo(() => (today ? buildAdjustAlternatives(today) : []), [today]);
   const setupContextIndicator = source?.kind === "setup" ? setupContextIndicatorText(source.context) : undefined;
   const capturedLink = buildTodayCapturedLink("today");
+  const nowCapturedLink = buildTodayCapturedLink("now");
 
   useEffect(() => {
     if (!today || !userContext || !source) {
@@ -136,6 +137,7 @@ export default function TodayPage() {
             <button className={styles.doneButton} type="button" onClick={returnToMorning}>
               Done
             </button>
+            {nowCapturedLink ? <Link className={styles.nowCapturedLink} href={nowCapturedLink.href}>{nowCapturedLink.label}</Link> : null}
             <button className={styles.adjustButton} type="button" onClick={toggleAdjust} aria-expanded={showAdjust}>
               Adjust
             </button>
