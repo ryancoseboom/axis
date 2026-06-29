@@ -1,11 +1,13 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import Link from "next/link";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { generateToday } from "@/axis/engine";
 import { morningInputToUserContext, parseFocusWindowPhrase, parseMorningLines, type MorningInput } from "@/axis/morningInput";
 import { sampleRyanContext } from "@/axis/sampleRyanContext";
 import { clearConfirmedSetupContext, getConfirmedSetupContext, setupContextIndicatorText } from "@/axis/setupHandoff";
-import { buildAdjustAlternatives, buildBecausePresentation, type AdjustAlternative } from "@/axis/todayPresentation";
+import { buildTodayCaptureContext, clearTodayCaptureContext, setTodayCaptureContext, type TodayCaptureContextSource } from "@/axis/todayCaptureContext";
+import { buildAdjustAlternatives, buildBecausePresentation, buildTodayCapturedLink, type AdjustAlternative } from "@/axis/todayPresentation";
 import type { TimelineItem, UserContext } from "@/axis/types";
 import styles from "./today.module.css";
 
@@ -45,6 +47,16 @@ export default function TodayPage() {
   const because = useMemo(() => (today ? buildBecausePresentation(today) : undefined), [today]);
   const adjustAlternatives = useMemo(() => (today ? buildAdjustAlternatives(today) : []), [today]);
   const setupContextIndicator = source?.kind === "setup" ? setupContextIndicatorText(source.context) : undefined;
+  const capturedLink = buildTodayCapturedLink("today");
+
+  useEffect(() => {
+    if (!today || !userContext || !source) {
+      clearTodayCaptureContext();
+      return;
+    }
+
+    setTodayCaptureContext(buildTodayCaptureContext(today, userContext, captureSourceFor(source)));
+  }, [source, today, userContext]);
 
   function updateDraft(field: keyof MorningDraft, value: string) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -144,9 +156,12 @@ export default function TodayPage() {
       <section className={styles.header} aria-labelledby="today-title">
         <div className={styles.headerRow}>
           <p className={styles.kicker}>Today</p>
-          <button className={styles.editInputsButton} type="button" onClick={editInputs}>
-            {setupContextIndicator ? "Use Morning input instead" : "Edit inputs"}
-          </button>
+          <div className={styles.headerActions}>
+            {capturedLink ? <Link className={styles.capturedLink} href={capturedLink.href}>{capturedLink.label}</Link> : null}
+            <button className={styles.editInputsButton} type="button" onClick={editInputs}>
+              {setupContextIndicator ? "Use Morning input instead" : "Edit inputs"}
+            </button>
+          </div>
         </div>
         <h1 id="today-title">{today.theme}</h1>
         {setupContextIndicator ? <p className={styles.contextNote}>{setupContextIndicator}</p> : null}
@@ -203,6 +218,12 @@ export default function TodayPage() {
       </details>
     </main>
   );
+}
+
+function captureSourceFor(source: TodaySource): TodayCaptureContextSource {
+  if (source.kind === "setup") return "setup";
+  if (source.kind === "demo") return "sample";
+  return "morning";
 }
 
 function MorningInputSurface({

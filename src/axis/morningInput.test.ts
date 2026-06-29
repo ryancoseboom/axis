@@ -58,7 +58,7 @@ test("existing demo sample flow still works", () => {
   const today = generateToday(sampleRyanContext);
 
   assert.equal(today.selectedDecisions.now.id, "decision-protect-opportunity-protected-engine");
-  assert.equal(today.protectedSession.title, "Build the smallest working Today engine slice");
+  assert.equal(today.protectedSession.title, "Write and produce the next Halou sketch.");
 });
 
 test("morning line parser keeps only meaningful lines", () => {

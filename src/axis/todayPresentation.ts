@@ -14,6 +14,12 @@ export type AdjustAlternative = {
   sourceDecisionId: string;
 };
 
+export type TodayCapturedLink = {
+  label: string;
+  href: "/dev/captured";
+  placement: "today_header";
+};
+
 export function buildBecausePresentation(today: GeneratedToday): BecausePresentation {
   const explanation = explainTodayOutput(today, { type: "now" });
   const confidence = explainTodayOutput(today, { type: "confidence" });
@@ -21,6 +27,18 @@ export function buildBecausePresentation(today: GeneratedToday): BecausePresenta
   return {
     explanation: explanation.conciseExplanation,
     confidenceLine: confidenceLine(confidence.confidenceContributors)
+  };
+}
+
+export function buildTodayCapturedLink(mode: "today" | "now" = "today"): TodayCapturedLink | undefined {
+  if (mode === "now") {
+    return undefined;
+  }
+
+  return {
+    label: "Capture what happened",
+    href: "/dev/captured",
+    placement: "today_header"
   };
 }
 

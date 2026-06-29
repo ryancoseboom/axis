@@ -1,4 +1,5 @@
-import { buildUserContextFromSetup, type BuildUserContextFromSetupOptions, type SetupState } from "./setup";
+import { calculateWeeklyCapacity } from "./capacityPlanner";
+import { buildUserContextFromSetup, buildWeeklyPlanFromSetup, type BuildUserContextFromSetupOptions, type SetupState } from "./setup";
 import type { KnowledgeNodeStatus, Pillar, Program, UserContext } from "./types";
 
 export type KnowledgeStateSummaryGroup = {
@@ -51,8 +52,37 @@ export type SetupConfirmationSummary = {
   calendar: SetupConfirmationCalendarSummary;
 };
 
+export type WeeklyCapacityReviewGroup = {
+  label: string;
+  count: number;
+  totalMinutes: number;
+  items: string[];
+};
+
+export type WeeklyCapacityMomentumReview = {
+  pillarName: string;
+  minimumSessions: number;
+  minimumMinutes?: number;
+  plannedSessions: number;
+  plannedMinutes: number;
+  supported: boolean;
+};
+
+export type WeeklyCapacityReview = {
+  weekStart: string;
+  totalCapacityMinutes: number;
+  remainingCapacityMinutes: number;
+  overloaded: boolean;
+  fixedCommitments: WeeklyCapacityReviewGroup;
+  flexibleCommitments: WeeklyCapacityReviewGroup;
+  plannedSessions: WeeklyCapacityReviewGroup;
+  momentumRequirements: WeeklyCapacityMomentumReview[];
+  underSupportedPillars: WeeklyCapacityMomentumReview[];
+};
+
 const DISPLAYED_STATES: KnowledgeNodeStatus[] = ["confident", "practiced", "developing", "introduced", "needs_review"];
 const DEFAULT_LIMIT = 3;
+const CAPACITY_ITEM_LIMIT = 5;
 
 export function buildSetupKnowledgeReview(setup: SetupState, options: BuildUserContextFromSetupOptions & { limitPerState?: number } = {}): PillarKnowledgeReview[] {
   const context = buildUserContextFromSetup(setup, options);
@@ -106,6 +136,23 @@ export function buildSetupConfirmationSummary(setup: SetupState, options: BuildU
   };
 }
 
+export function buildWeeklyCapacityReview(setup: SetupState): WeeklyCapacityReview {
+  const plan = buildWeeklyPlanFromSetup(setup);
+  const summary = calculateWeeklyCapacity(plan);
+
+  return {
+    weekStart: summary.weekStart,
+    totalCapacityMinutes: summary.totalCapacityMinutes,
+    remainingCapacityMinutes: summary.remainingCapacityMinutes,
+    overloaded: summary.overloaded,
+    fixedCommitments: capacityGroup("Fixed commitments", plan.fixedCommitments),
+    flexibleCommitments: capacityGroup("Flexible commitments", plan.flexibleCommitments),
+    plannedSessions: capacityGroup("Planned sessions", plan.plannedSessions),
+    momentumRequirements: summary.momentum.map(momentumReview),
+    underSupportedPillars: summary.underSupportedPillars.map(momentumReview)
+  };
+}
+
 function groupForStatus(pillar: Pillar, states: NonNullable<UserContext["pillarMemory"]>["knowledgeStates"], status: KnowledgeNodeStatus, limit: number): KnowledgeStateSummaryGroup {
   const concepts = (states ?? [])
     .filter((state) => state.status === status)
@@ -118,6 +165,33 @@ function groupForStatus(pillar: Pillar, states: NonNullable<UserContext["pillarM
     label: labelForStatus(status),
     concepts: concepts.slice(0, limit),
     totalCount: concepts.length
+  };
+}
+
+function capacityGroup(label: string, items: { title: string; durationMinutes: number; preparationMinutes?: number; travelMinutes?: number }[]): WeeklyCapacityReviewGroup {
+  return {
+    label,
+    count: items.length,
+    totalMinutes: items.reduce((total, item) => total + item.durationMinutes + (item.preparationMinutes ?? 0) + (item.travelMinutes ?? 0), 0),
+    items: items.map((item) => item.title).slice(0, CAPACITY_ITEM_LIMIT)
+  };
+}
+
+function momentumReview(item: {
+  pillarName: string;
+  minimumSessions: number;
+  minimumMinutes?: number;
+  plannedSessions: number;
+  plannedMinutes: number;
+  supported: boolean;
+}): WeeklyCapacityMomentumReview {
+  return {
+    pillarName: item.pillarName,
+    minimumSessions: item.minimumSessions,
+    minimumMinutes: item.minimumMinutes,
+    plannedSessions: item.plannedSessions,
+    plannedMinutes: item.plannedMinutes,
+    supported: item.supported
   };
 }
 

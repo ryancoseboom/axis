@@ -15,7 +15,7 @@ export function generateOpportunities(facts: Facts): Opportunity[] {
     {
       id: "opportunity-protected-engine",
       title: primaryTitle,
-      pursuitId: versionZeroMission?.pursuitId ?? "pursuit-axis",
+      pursuitId: versionZeroMission?.pursuitId ?? "pursuit-today",
       missionId: versionZeroMission?.id ?? "mission-version-zero",
       durationMinutes: durationForWindow(focusWindow),
       preferredWindow: focusWindow,
@@ -28,7 +28,7 @@ export function generateOpportunities(facts: Facts): Opportunity[] {
     {
       id: "opportunity-product-notes",
       title: "Clarify the Today screen language",
-      pursuitId: versionZeroMission?.pursuitId ?? "pursuit-axis",
+      pursuitId: versionZeroMission?.pursuitId ?? "pursuit-today",
       missionId: versionZeroMission?.id ?? "mission-version-zero",
       durationMinutes: 45,
       preferredWindow: { start: "14:00", end: "14:45" },
@@ -40,7 +40,7 @@ export function generateOpportunities(facts: Facts): Opportunity[] {
     {
       id: "opportunity-recovery-walk",
       title: "Take a real recovery walk before the evening",
-      pursuitId: recoveryMission?.pursuitId ?? "pursuit-health",
+      pursuitId: recoveryMission?.pursuitId ?? "pursuit-lifting",
       missionId: recoveryMission?.id ?? "mission-recovery",
       durationMinutes: 30,
       preferredWindow: { start: "17:15", end: "17:45" },
@@ -54,8 +54,8 @@ export function generateOpportunities(facts: Facts): Opportunity[] {
 
 
 function primaryOpportunityTitle(currentNeed?: string): string {
-  if (!currentNeed || currentNeed === "Turn the philosophy into a working Today prototype without adding infrastructure.") {
-    return "Build the smallest working Today engine slice";
+  if (!currentNeed) {
+    return "Protect the first honest block of the day";
   }
 
   return currentNeed;

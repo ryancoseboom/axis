@@ -9,6 +9,7 @@ import {
   getDomainModel,
   listDomainModels,
   registerDomainModel,
+  internalAxisDevelopmentDomainModel,
   sampleBrazilianJiuJitsuDomainModel,
   sampleDomainModelCatalog,
   sampleWeightliftingDomainModel
@@ -94,8 +95,9 @@ test("DomainModel catalog registration replaces models with the same id", () => 
 test("DomainModel catalog lists available models", () => {
   const summaries = listDomainModels(sampleDomainModelCatalog);
 
-  assert.deepEqual(summaries.map((summary) => summary.id), ["domain-axis", "domain-brazilian-jiu-jitsu", "domain-music", "domain-weightlifting"]);
+  assert.deepEqual(summaries.map((summary) => summary.id), ["domain-brazilian-jiu-jitsu", "domain-music", "domain-weightlifting"]);
   assert.ok(summaries.some((summary) => summary.name === "Brazilian Jiu-Jitsu"));
+  assert.equal(summaries.some((summary) => summary.name.includes("Axis")), false);
 });
 
 test("DomainModel catalog retrieves by id", () => {
@@ -109,7 +111,13 @@ test("DomainModel catalog finds models by id, name, and alias", () => {
   assert.equal(findDomainModel(sampleDomainModelCatalog, "Weightlifting")?.id, "domain-weightlifting");
   assert.equal(findDomainModel(sampleDomainModelCatalog, "BJJ")?.id, "domain-brazilian-jiu-jitsu");
   assert.equal(findDomainModel(sampleDomainModelCatalog, "Strength Training")?.id, "domain-weightlifting");
-  assert.equal(findDomainModel(sampleDomainModelCatalog, "Software Project")?.id, "domain-axis");
+  assert.equal(findDomainModel(sampleDomainModelCatalog, "Software Project"), undefined);
+});
+
+test("internal Axis development model is preserved outside the user catalog", () => {
+  assert.equal(internalAxisDevelopmentDomainModel.id, "domain-internal-axis-development");
+  assert.equal(internalAxisDevelopmentDomainModel.name, "Internal Axis Development");
+  assert.equal(findDomainModel(sampleDomainModelCatalog, "Internal Axis Development"), undefined);
 });
 
 test("DomainModel attachment preserves Pillar identity fields", () => {

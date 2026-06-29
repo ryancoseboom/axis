@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildUserContextFromSetup, sampleRyanSetup } from "./setup";
-import { buildKnowledgeStateSummary, buildSetupConfirmationSummary, buildSetupKnowledgeReview } from "./setupPresentation";
+import { buildKnowledgeStateSummary, buildSetupConfirmationSummary, buildSetupKnowledgeReview, buildWeeklyCapacityReview } from "./setupPresentation";
 import type { SetupState } from "./setup";
 import type { UserContext } from "./types";
 
@@ -26,8 +26,8 @@ test("BJJ setup review includes Arm Bar and Closed Guard where appropriate", () 
   assert.ok(concepts.includes("Closed Guard"));
 });
 
-test("Weightlifting setup review includes program concepts", () => {
-  const review = reviewFor("Health");
+test("Lifting setup review includes program concepts", () => {
+  const review = reviewFor("Lifting");
   const allConcepts = review.groups.flatMap((group) => group.concepts);
 
   assert.ok(allConcepts.includes("Pull"));
@@ -42,12 +42,11 @@ test("Music setup review includes songwriting and production concepts", () => {
   assert.ok(concepts.includes("Production"));
 });
 
-test("Axis setup review includes architecture concepts", () => {
-  const concepts = allConceptsFor("Axis");
+test("Porthos setup review includes care concepts", () => {
+  const concepts = allConceptsFor("Porthos");
 
-  assert.ok(concepts.includes("Decision Graph"));
-  assert.ok(concepts.includes("Domain Models"));
-  assert.ok(concepts.includes("Knowledge Maps"));
+  assert.ok(concepts.includes("Care"));
+  assert.ok(concepts.includes("Routine"));
 });
 
 test("setup review excludes raw ids", () => {
@@ -98,9 +97,8 @@ test("setup confirmation summary includes active pillars", () => {
   const summary = buildSetupConfirmationSummary(sampleRyanSetup);
   const pillarNames = summary.activePillars.map((pillar) => pillar.pillarName);
 
-  assert.ok(pillarNames.includes("BJJ"));
-  assert.ok(pillarNames.includes("Health"));
-  assert.ok(pillarNames.includes("Axis"));
+  assert.deepEqual([...pillarNames].sort(), ["BJJ", "Lifting", "Music", "Porthos"]);
+  assert.equal(pillarNames.includes("Axis"), false);
 });
 
 test("setup confirmation summary includes attached domains", () => {
@@ -110,7 +108,8 @@ test("setup confirmation summary includes attached domains", () => {
   assert.ok(domains.includes("Brazilian Jiu-Jitsu"));
   assert.ok(domains.includes("Weightlifting"));
   assert.ok(domains.includes("Music"));
-  assert.ok(domains.includes("Axis"));
+  assert.ok(domains.includes("Porthos"));
+  assert.equal(domains.includes("Axis"), false);
 });
 
 test("setup confirmation summary includes active programs", () => {
@@ -118,7 +117,7 @@ test("setup confirmation summary includes active programs", () => {
   const program = summary.activePrograms.find((item) => item.name === "5-day weightlifting cycle");
 
   assert.ok(program);
-  assert.equal(program.pillarName, "Health");
+  assert.equal(program.pillarName, "Lifting");
   assert.equal(program.cadence, "5-day repeating cycle");
   assert.equal(program.dayCount, 5);
 });
@@ -160,4 +159,94 @@ test("setup confirmation summary handles missing optional setup fields safely", 
   assert.deepEqual(summary.activePrograms, []);
   assert.deepEqual(summary.activeRoutines, []);
   assert.equal(summary.calendar.preferredProvider, "none");
+});
+
+test("weekly capacity review shows Lifting sessions", () => {
+  const review = buildWeeklyCapacityReview(sampleRyanSetup);
+
+  assert.ok(review.plannedSessions.items.some((item) => item.includes("Pull - biceps")));
+  assert.equal(review.plannedSessions.count, 10);
+});
+
+test("weekly capacity review shows BJJ cadence", () => {
+  const review = buildWeeklyCapacityReview(sampleRyanSetup);
+  const bjj = review.momentumRequirements.find((item) => item.pillarName === "BJJ");
+
+  assert.equal(bjj?.minimumSessions, 4);
+  assert.equal(bjj?.minimumMinutes, 360);
+});
+
+test("weekly capacity review shows Music capacity", () => {
+  const review = buildWeeklyCapacityReview(sampleRyanSetup);
+  const music = review.momentumRequirements.find((item) => item.pillarName === "Music");
+
+  assert.equal(review.plannedSessions.totalMinutes, 750);
+  assert.equal(music?.plannedMinutes, 90);
+});
+
+test("weekly capacity review shows Porthos commitments", () => {
+  const review = buildWeeklyCapacityReview(sampleRyanSetup);
+
+  assert.equal(review.flexibleCommitments.count, 7);
+  assert.equal(review.flexibleCommitments.totalMinutes, 210);
+  assert.ok(review.flexibleCommitments.items.includes("Porthos care"));
+});
+
+test("weekly capacity review shows under-supported Pillars when relevant", () => {
+  const setup: SetupState = {
+    ...sampleRyanSetup,
+    routines: sampleRyanSetup.routines?.filter((routine) => routine.pillarName !== "Music")
+  };
+  const review = buildWeeklyCapacityReview(setup);
+  const names = review.underSupportedPillars.map((item) => item.pillarName);
+
+  assert.ok(names.includes("Music"));
+});
+
+test("weekly capacity review shows overloaded week when relevant", () => {
+  const setup: SetupState = {
+    ...sampleRyanSetup,
+    programs: [
+      ...(sampleRyanSetup.programs ?? []),
+      {
+        pillarName: "Music",
+        name: "Album sprint",
+        cadence: "20 sessions/week",
+        preferredDurationMinutes: 120
+      }
+    ]
+  };
+  const review = buildWeeklyCapacityReview(setup);
+
+  assert.equal(review.overloaded, true);
+});
+
+test("weekly capacity review handles sparse setup safely", () => {
+  const setup: SetupState = {
+    userProfile: { name: "Avery" },
+    identityProfile: {
+      desiredIdentityStatement: "Keep one area alive.",
+      values: [],
+      longTermAspirations: [],
+      nonNegotiables: []
+    },
+    pillars: [
+      {
+        name: "Practice",
+        description: "Keep one area alive.",
+        priority: 5,
+        status: "active"
+      }
+    ],
+    calendar: {
+      preferredProvider: "none",
+      importStatus: "declined"
+    }
+  };
+  const review = buildWeeklyCapacityReview(setup);
+
+  assert.equal(review.plannedSessions.count, 0);
+  assert.equal(review.fixedCommitments.count, 0);
+  assert.equal(review.flexibleCommitments.count, 0);
+  assert.equal(review.momentumRequirements[0]?.pillarName, "Practice");
 });

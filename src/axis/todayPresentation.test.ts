@@ -3,7 +3,7 @@ import test from "node:test";
 import { generateToday } from "./engine";
 import { explainTodayOutput } from "./explainability";
 import { sampleRyanContext } from "./sampleRyanContext";
-import { buildAdjustAlternatives, buildBecausePresentation } from "./todayPresentation";
+import { buildAdjustAlternatives, buildBecausePresentation, buildTodayCapturedLink } from "./todayPresentation";
 
 test("Because uses Explainability service output", () => {
   const today = generateToday(sampleRyanContext);
@@ -51,4 +51,16 @@ test("Adjust alternatives do not break when missing", () => {
   };
 
   assert.deepEqual(buildAdjustAlternatives(withoutAlternatives), []);
+});
+
+test("Today Captured link points to dev capture shell", () => {
+  const link = buildTodayCapturedLink("today");
+
+  assert.equal(link?.label, "Capture what happened");
+  assert.equal(link?.href, "/dev/captured");
+  assert.equal(link?.placement, "today_header");
+});
+
+test("Now mode remains minimal without capture link", () => {
+  assert.equal(buildTodayCapturedLink("now"), undefined);
 });

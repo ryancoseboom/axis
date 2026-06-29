@@ -42,8 +42,8 @@ const DEFAULT_EQUIPMENT = ["dumbbells", "cable machine", "Smith machine", "barbe
 const DEFAULT_CAUTION_TAGS = ["hammer-curl", "elbow-irritation"];
 
 export const sampleWeightliftingProgram: Program = {
-  id: "program-health-weightlifting-5-day",
-  pillarId: "pillar-health",
+  id: "program-lifting-weightlifting-5-day",
+  pillarId: "pillar-lifting",
   name: "5-day weightlifting cycle",
   description: "Repeating development cycle for strength and muscular balance.",
   cycleType: "repeating",
@@ -184,7 +184,7 @@ export function generateProgramDevelopmentSignals(
         topicIds: [],
         priority: 8,
         dueDate: today,
-        protects: "Health"
+        protects: "Lifting"
       };
     });
 }
@@ -230,7 +230,7 @@ function programSessionToPracticeEntry(
 
   return {
     id: `practice-${slug(program?.pillarId ?? "program")}-${slug(session.date)}-${existingEntryCount + 1}`,
-    pillarId: program?.pillarId ?? "pillar-health",
+    pillarId: program?.pillarId ?? "pillar-lifting",
     date: session.date,
     title,
     notes: `${session.notes}${movementText}${setsText}`.trim(),

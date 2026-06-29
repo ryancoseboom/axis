@@ -25,6 +25,8 @@ export type PracticeEntryInput = {
 };
 
 export const samplePillars: Pillar[] = [
+  pillar("pillar-porthos", "Porthos", "Care, relationship, and daily steadiness with Porthos.", 7),
+  pillar("pillar-music", "Music", "Write, record, and deepen musical craft.", 8, musicKnowledgeMap()),
   {
     id: "pillar-bjj",
     name: "BJJ",
@@ -34,10 +36,7 @@ export const samplePillars: Pillar[] = [
     status: "active",
     knowledgeMap: bjjKnowledgeMap()
   },
-  pillar("pillar-axis", "Axis", "Build the reasoning engine and product philosophy.", 10, axisKnowledgeMap()),
-  pillar("pillar-music", "Music", "Write, record, and deepen musical craft.", 8, musicKnowledgeMap()),
-  pillar("pillar-health", "Health", "Protect vitality, strength, and recovery.", 7, healthKnowledgeMap()),
-  pillar("pillar-porthos", "Porthos", "Care, relationship, and daily steadiness with Porthos.", 7)
+  pillar("pillar-lifting", "Lifting", "Protect strength, vitality, and recovery.", 7, liftingKnowledgeMap())
 ];
 
 export const samplePracticeEntries: PracticeEntry[] = [
@@ -158,26 +157,6 @@ function bjjKnowledgeMap(): KnowledgeMap {
   });
 }
 
-function axisKnowledgeMap(): KnowledgeMap {
-  return createKnowledgeMap({
-    pillarId: "pillar-axis",
-    name: "Axis Knowledge Map",
-    concepts: [
-      { name: "Decision Graph", description: "The deterministic graph that turns facts into explainable decisions.", aliases: ["decision graph"] },
-      { name: "Explainability", description: "Clear reasons and paths for every selected output.", aliases: ["explainability"] },
-      { name: "Confidence", description: "Calibrated trust in a generated plan.", aliases: ["confidence"] },
-      { name: "Calendar", description: "Provider-agnostic time and commitment context.", aliases: ["calendar"] },
-      { name: "Identity", description: "The values and priorities protected by Axis.", aliases: ["identity"] }
-    ],
-    relationships: [
-      ["Decision Graph", "part_of", "Explainability", "Explainability exposes why the Decision Graph chose an output."],
-      ["Confidence", "reinforces", "Explainability", "Confidence becomes more useful when the explanation is visible."],
-      ["Calendar", "reinforces", "Decision Graph", "Calendar facts improve Decision Graph context fit."],
-      ["Identity", "prerequisite", "Decision Graph", "Identity gives the Decision Graph something to protect."]
-    ]
-  });
-}
-
 function musicKnowledgeMap(): KnowledgeMap {
   return createKnowledgeMap({
     pillarId: "pillar-music",
@@ -196,9 +175,9 @@ function musicKnowledgeMap(): KnowledgeMap {
   });
 }
 
-function healthKnowledgeMap(): KnowledgeMap {
+function liftingKnowledgeMap(): KnowledgeMap {
   return createKnowledgeMap({
-    pillarId: "pillar-health",
+    pillarId: "pillar-lifting",
     name: "Weightlifting Knowledge Map",
     concepts: [
       { name: "Pull", description: "Pulling patterns for back and arm development.", sourceTopicIds: ["program-day-pull-biceps", "program-day-pull-back"], aliases: ["pull"] },

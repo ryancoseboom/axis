@@ -73,7 +73,7 @@ function toProtectedSession(decision: CandidateDecision, reasonIds: string[]): S
   return {
     id: decision.opportunityId ?? decision.id,
     title: decision.title,
-    pursuitId: decision.pursuitId ?? "pursuit-axis",
+    pursuitId: decision.pursuitId ?? "pursuit-today",
     missionId: decision.missionId ?? "mission-version-zero",
     durationMinutes: decision.durationMinutes ?? 0,
     preferredWindow: decision.window ?? { start: "08:45", end: "10:00" },

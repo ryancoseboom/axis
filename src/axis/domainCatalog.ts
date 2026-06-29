@@ -95,14 +95,13 @@ export function attachDomainModelToPillarMemory(memory: PillarMemory, pillarId: 
 
 export const sampleBrazilianJiuJitsuDomainModel = compileDomainModel(sampleBrazilianJiuJitsuGeneratedModel(), { pillarId: "pillar-bjj" });
 
-export const sampleWeightliftingDomainModel = compileDomainModel(sampleWeightliftingGeneratedModel(), { pillarId: "pillar-health" });
+export const sampleWeightliftingDomainModel = compileDomainModel(sampleWeightliftingGeneratedModel(), { pillarId: "pillar-lifting" });
 
 export const sampleMusicDomainModel = compileDomainModel(sampleMusicGeneratedModel(), { pillarId: "pillar-music" });
 
-export const sampleAxisDomainModel = compileDomainModel(sampleAxisGeneratedModel(), { pillarId: "pillar-axis" });
+export const internalAxisDevelopmentDomainModel = compileDomainModel(sampleAxisGeneratedModel(), { pillarId: "internal-axis-development" });
 
 export const sampleDomainModelCatalog = createDomainModelCatalog([
-  sampleAxisDomainModel,
   sampleBrazilianJiuJitsuDomainModel,
   sampleMusicDomainModel,
   sampleWeightliftingDomainModel
@@ -111,9 +110,7 @@ export const sampleDomainModelCatalog = createDomainModelCatalog([
   "jiu jitsu": sampleBrazilianJiuJitsuDomainModel.id,
   "strength training": sampleWeightliftingDomainModel.id,
   lifting: sampleWeightliftingDomainModel.id,
-  songwriting: sampleMusicDomainModel.id,
-  "software project": sampleAxisDomainModel.id,
-  "product engineering": sampleAxisDomainModel.id
+  songwriting: sampleMusicDomainModel.id
 });
 
 function preserveKnowledgeStates(previousMap: KnowledgeMap, nextMap: KnowledgeMap, states: KnowledgeState[]): KnowledgeState[] {
@@ -236,12 +233,12 @@ function sampleMusicGeneratedModel(): GeneratedDomainModel {
 function sampleAxisGeneratedModel(): GeneratedDomainModel {
   return {
     metadata: {
-      domainName: "Axis",
+      domainName: "Internal Axis Development",
       learnerLevel: "advanced",
       desiredBreadth: "narrow",
       version: "1.0.0",
       promptVersion: "domain-generation-v1",
-      generatorVersion: "sample-domain-catalog",
+      generatorVersion: "internal-dev-domain-catalog",
       createdBy: "axis"
     },
     categories: ["Reasoning", "Product", "Context"],

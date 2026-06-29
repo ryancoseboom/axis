@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createDomainModelCatalog } from "./domainCatalog";
-import { generateToday } from "./engine";
+import { gatherFacts, generateToday } from "./engine";
+import { buildDecisionGraph } from "./decisionGraph";
+import { calculateWeeklyCapacity, capacityPlanToDecisionGraphFacts } from "./capacityPlanner";
 import {
+  buildWeeklyPlanFromSetup,
   buildUserContextFromSetup,
   sampleRyanSetup,
   validateSetupState
@@ -20,8 +23,8 @@ function minimalSetup(): SetupState {
     },
     pillars: [
       {
-        name: "Health",
-        description: "Protect energy and recovery.",
+        name: "Lifting",
+        description: "Protect strength and recovery.",
         priority: 7
       }
     ],
@@ -55,11 +58,11 @@ test("setup state validation reports missing foundational data", () => {
 
 test("setup state can include multiple pillars", () => {
   const context = buildUserContextFromSetup(sampleRyanSetup);
+  const pillarNames = context.pillarMemory?.pillars.map((pillar) => pillar.name).sort();
 
   assert.ok(context.pillarMemory);
-  assert.ok(context.pillarMemory.pillars.length >= 5);
-  assert.ok(context.pillarMemory.pillars.some((pillar) => pillar.name === "BJJ"));
-  assert.ok(context.pillarMemory.pillars.some((pillar) => pillar.name === "Axis"));
+  assert.deepEqual(pillarNames, ["BJJ", "Lifting", "Music", "Porthos"]);
+  assert.equal(context.pillarMemory.pillars.some((pillar) => pillar.name === "Axis"), false);
 });
 
 test("BJJ level and profile maps into pillar and domain data", () => {
@@ -117,12 +120,12 @@ test("weightlifting program setup maps into Program data", () => {
   assert.ok(program.days[2]?.movementOptions.some((movement) => movement.name === "seated cable row"));
 });
 
-test("Weightlifting setup attaches DomainModel from catalog", () => {
+test("Lifting setup attaches Weightlifting DomainModel from catalog", () => {
   const context = buildUserContextFromSetup(sampleRyanSetup);
-  const health = context.pillarMemory?.pillars.find((pillar) => pillar.name === "Health");
+  const lifting = context.pillarMemory?.pillars.find((pillar) => pillar.name === "Lifting");
 
-  assert.equal(health?.knowledgeMap.name, "Weightlifting Knowledge Map");
-  assert.ok(health?.knowledgeMap.nodes.some((node) => node.concept.name === "Cable Row"));
+  assert.equal(lifting?.knowledgeMap.name, "Weightlifting Knowledge Map");
+  assert.ok(lifting?.knowledgeMap.nodes.some((node) => node.concept.name === "Cable Row"));
 });
 
 test("missing DomainModel falls back safely", () => {
@@ -176,15 +179,15 @@ test("Weightlifting program initializes relevant concepts", () => {
   const context = buildUserContextFromSetup(sampleRyanSetup);
   const states = context.pillarMemory?.knowledgeStates ?? [];
 
-  assert.ok(states.some((state) => state.nodeId === "knowledge-health-pull" && ["introduced", "practiced", "developing"].includes(state.status)));
-  assert.ok(states.some((state) => state.nodeId === "knowledge-health-biceps" && ["introduced", "practiced", "developing"].includes(state.status)));
-  assert.ok(states.some((state) => state.nodeId === "knowledge-health-cable-row" && ["introduced", "practiced", "developing"].includes(state.status)));
+  assert.ok(states.some((state) => state.nodeId === "knowledge-lifting-pull" && ["introduced", "practiced", "developing"].includes(state.status)));
+  assert.ok(states.some((state) => state.nodeId === "knowledge-lifting-biceps" && ["introduced", "practiced", "developing"].includes(state.status)));
+  assert.ok(states.some((state) => state.nodeId === "knowledge-lifting-cable-row" && ["introduced", "practiced", "developing"].includes(state.status)));
 });
 
 test("recent Cable Row history marks Cable Row practiced", () => {
   const setup = {
     ...sampleRyanSetup,
-    pillars: sampleRyanSetup.pillars.map((pillar) => pillar.name === "Health" ? {
+    pillars: sampleRyanSetup.pillars.map((pillar) => pillar.name === "Lifting" ? {
       ...pillar,
       domainProfile: {
         domainName: pillar.domainProfile?.domainName ?? "Weightlifting",
@@ -201,7 +204,7 @@ test("recent Cable Row history marks Cable Row practiced", () => {
   const context = buildUserContextFromSetup(setup);
   const states = context.pillarMemory?.knowledgeStates ?? [];
 
-  assert.ok(states.some((state) => state.nodeId === "knowledge-health-cable-row" && state.status === "practiced"));
+  assert.ok(states.some((state) => state.nodeId === "knowledge-lifting-cable-row" && state.status === "practiced"));
 });
 
 test("Music Halou profile initializes songwriting or production concepts", () => {
@@ -212,13 +215,15 @@ test("Music Halou profile initializes songwriting or production concepts", () =>
   assert.ok(states.some((state) => state.nodeId === "knowledge-music-production" && ["developing", "practiced", "confident"].includes(state.status)));
 });
 
-test("Axis setup initializes architecture concepts", () => {
+test("Porthos setup is included without Axis architecture concepts", () => {
   const context = buildUserContextFromSetup(sampleRyanSetup);
-  const states = context.pillarMemory?.knowledgeStates ?? [];
+  const porthos = context.pillarMemory?.pillars.find((pillar) => pillar.name === "Porthos");
+  const nodeIds = context.pillarMemory?.knowledgeStates?.map((state) => state.nodeId) ?? [];
 
-  assert.ok(states.some((state) => state.nodeId === "knowledge-axis-decision-graph" && ["developing", "practiced", "confident"].includes(state.status)));
-  assert.ok(states.some((state) => state.nodeId === "knowledge-axis-domain-models" && ["developing", "practiced", "confident"].includes(state.status)));
-  assert.ok(states.some((state) => state.nodeId === "knowledge-axis-knowledge-maps" && ["developing", "practiced", "confident"].includes(state.status)));
+  assert.ok(porthos);
+  assert.ok(porthos.knowledgeMap.nodes.some((node) => node.concept.name === "Care"));
+  assert.equal(context.pillarMemory?.pillars.some((pillar) => pillar.name === "Axis"), false);
+  assert.equal(nodeIds.some((nodeId) => nodeId.includes("knowledge-axis")), false);
 });
 
 test("existing KnowledgeState is preserved unless setup infers a stronger state", () => {
@@ -252,7 +257,7 @@ test("buildUserContextFromSetup returns usable UserContext", () => {
 
   assert.equal(context.userName, "Casey");
   assert.equal(context.themeSeed, "Become steady and clear.");
-  assert.equal(context.pillarMemory?.pillars[0]?.name, "Health");
+  assert.equal(context.pillarMemory?.pillars[0]?.name, "Lifting");
   assert.ok(context.principles.some((principle) => principle.name === "Reality wins"));
 });
 
@@ -264,4 +269,67 @@ test("Today can generate from sample setup context", () => {
   assert.ok(today.timeline.length > 0);
   assert.ok(today.candidateDecisions.length > 0);
   assert.ok(today.confidence >= 0 && today.confidence <= 100);
+});
+
+test("setup lifting program creates planned weekly sessions", () => {
+  const plan = buildWeeklyPlanFromSetup(sampleRyanSetup);
+  const liftingSessions = plan.plannedSessions.filter((session) => session.pillarId === "pillar-lifting");
+
+  assert.equal(liftingSessions.length, 5);
+  assert.ok(liftingSessions.some((session) => session.title.includes("Pull - biceps")));
+  assert.ok(liftingSessions.every((session) => session.durationMinutes === 60));
+});
+
+test("setup BJJ cadence creates momentum requirement", () => {
+  const plan = buildWeeklyPlanFromSetup(sampleRyanSetup);
+  const requirement = plan.momentumRequirements.find((item) => item.pillarName === "BJJ");
+
+  assert.equal(requirement?.minimumSessions, 4);
+  assert.equal(requirement?.minimumMinutes, 360);
+});
+
+test("setup Music routine creates planned capacity", () => {
+  const plan = buildWeeklyPlanFromSetup(sampleRyanSetup);
+  const musicSessions = plan.plannedSessions.filter((session) => session.pillarId === "pillar-music");
+  const summary = calculateWeeklyCapacity(plan);
+
+  assert.equal(musicSessions.length, 1);
+  assert.equal(musicSessions[0]?.durationMinutes, 90);
+  assert.ok(summary.plannedSessionMinutes >= 90);
+});
+
+test("setup Porthos work creates flexible capacity commitment", () => {
+  const plan = buildWeeklyPlanFromSetup(sampleRyanSetup);
+  const porthos = plan.flexibleCommitments.filter((item) => item.pillarId === "pillar-porthos");
+
+  assert.equal(porthos.length, 7);
+  assert.ok(porthos.every((item) => item.movable));
+  assert.ok(porthos.every((item) => item.durationMinutes === 30));
+});
+
+test("setup-derived WeeklyPlan calculates capacity correctly", () => {
+  const plan = buildWeeklyPlanFromSetup(sampleRyanSetup, { totalCapacityMinutes: 2400, reserveMinutes: 420 });
+  const summary = calculateWeeklyCapacity(plan);
+
+  assert.equal(summary.fixedCommitmentMinutes, 0);
+  assert.equal(summary.flexibleCommitmentMinutes, 210);
+  assert.equal(summary.plannedSessionMinutes, 750);
+  assert.equal(summary.remainingCapacityMinutes, 1020);
+  assert.equal(summary.overloaded, false);
+});
+
+test("Decision Graph can consume setup-derived capacity facts", () => {
+  const context = buildUserContextFromSetup(sampleRyanSetup);
+  const plan = buildWeeklyPlanFromSetup(sampleRyanSetup);
+  const capacityFacts = capacityPlanToDecisionGraphFacts(plan);
+  const facts = gatherFacts({
+    ...context,
+    constraints: [...context.constraints, ...capacityFacts.constraints],
+    resources: [...context.resources, ...capacityFacts.resources],
+    systems: [...context.systems, ...capacityFacts.systems]
+  });
+  const graph = buildDecisionGraph(facts);
+
+  assert.ok(graph.nodes.some((node) => node.id === "constraint-constraint-weekly-capacity-remaining"));
+  assert.ok(graph.nodes.some((node) => node.id === "constraint-resource-resource-weekly-capacity"));
 });

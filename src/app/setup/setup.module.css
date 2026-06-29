@@ -235,6 +235,55 @@
   margin-top: 12px;
 }
 
+.capacityReview {
+  display: grid;
+  gap: 18px;
+}
+
+.capacityWarning {
+  margin: -4px 0 0;
+  color: #c4b17b;
+  line-height: 1.5;
+}
+
+.capacityGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 28px;
+}
+
+.capacityGroup {
+  padding-top: 14px;
+  border-top: 1px solid rgba(241, 238, 231, 0.1);
+}
+
+.capacityGroup h3,
+.capacityNote h3 {
+  margin: 0;
+  color: #f1eee7;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.capacityGroup p,
+.capacityGroup ul,
+.capacityNote p {
+  margin: 9px 0 0;
+  padding: 0;
+  color: #bdb5a6;
+  line-height: 1.5;
+  list-style: none;
+}
+
+.capacityGroup li + li {
+  margin-top: 5px;
+}
+
+.capacityNote {
+  padding-top: 16px;
+  border-top: 1px solid rgba(196, 177, 123, 0.22);
+}
+
 .confirmationPanel {
   display: grid;
   gap: 18px;
@@ -333,6 +382,25 @@
   outline: none;
 }
 
+.devClearAction {
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #776f63;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.devClearAction:hover,
+.devClearAction:focus-visible {
+  color: #cfc4aa;
+  outline: none;
+}
+
 @media (max-width: 760px) {
   .page {
     padding: 36px 20px 64px;
@@ -350,6 +418,7 @@
 
   .reviewCard header,
   .stateGroups,
+  .capacityGrid,
   .confirmationGrid {
     grid-template-columns: 1fr;
   }

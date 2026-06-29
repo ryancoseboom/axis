@@ -18,26 +18,36 @@ export const sampleRyanContext: UserContext = {
   ],
   pursuits: [
     {
-      id: "pursuit-axis",
-      name: "Axis",
-      whyItMatters: "Build a reasoning engine that helps people spend today well."
+      id: "pursuit-porthos",
+      name: "Porthos",
+      whyItMatters: "Protect care, steadiness, and daily responsibility."
     },
     {
-      id: "pursuit-health",
-      name: "Health",
-      whyItMatters: "Keep energy stable enough for meaningful work and a steady evening."
+      id: "pursuit-music",
+      name: "Music",
+      whyItMatters: "Keep writing and production alive."
+    },
+    {
+      id: "pursuit-bjj",
+      name: "BJJ",
+      whyItMatters: "Stay technical, composed, and honest in training."
+    },
+    {
+      id: "pursuit-lifting",
+      name: "Lifting",
+      whyItMatters: "Keep strength, energy, and recovery steady."
     }
   ],
   missions: [
     {
       id: "mission-version-zero",
-      pursuitId: "pursuit-axis",
-      name: "Prove Version Zero",
-      currentNeed: "Turn the philosophy into a working Today prototype without adding infrastructure."
+      pursuitId: "pursuit-music",
+      name: "Protect the writing",
+      currentNeed: "Write and produce the next Halou sketch."
     },
     {
       id: "mission-recovery",
-      pursuitId: "pursuit-health",
+      pursuitId: "pursuit-lifting",
       name: "Protect baseline energy",
       currentNeed: "Avoid letting focus work consume the recovery that makes tomorrow possible."
     }
@@ -46,9 +56,9 @@ export const sampleRyanContext: UserContext = {
     {
       id: "milestone-engine-slice",
       missionId: "mission-version-zero",
-      name: "Generate a complete ordinary Thursday",
+      name: "Finish a clear Halou sketch",
       gravity: 10,
-      evidence: "The project docs say Version Zero succeeds by proving the Thursday Test."
+      evidence: "Music is one of the active user-facing Pillars."
     }
   ],
   systems: [

@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { generateToday } from "./engine";
+import { buildDecisionGraph } from "./decisionGraph";
+import { gatherFacts, generateToday } from "./engine";
 import { morningInputToUserContext } from "./morningInput";
 import { sampleRyanContext } from "./sampleRyanContext";
 import { sampleRyanSetup, type SetupState } from "./setup";
 import {
+  buildConfirmedSetupContext,
   clearConfirmedSetupContext,
   confirmSetupForToday,
   getConfirmedSetupContext,
@@ -20,8 +22,19 @@ test("confirmed setup produces UserContext", () => {
   assert.equal(context.userName, "Ryan");
   assert.equal(getConfirmedSetupContext()?.userName, "Ryan");
   assert.ok(context.pillarMemory?.pillars.some((pillar) => pillar.name === "BJJ"));
+  assert.ok(context.constraints.some((constraint) => constraint.id === "constraint-weekly-capacity-remaining"));
+  assert.ok(context.resources.some((resource) => resource.id === "resource-weekly-capacity"));
+  assert.ok(context.systems.some((system) => system.id === "system-momentum-pillar-bjj"));
 
   clearConfirmedSetupContext();
+});
+
+test("confirmed setup context includes setup-derived capacity facts", () => {
+  const context = buildConfirmedSetupContext(sampleRyanSetup);
+
+  assert.ok(context.constraints.some((constraint) => constraint.id === "constraint-weekly-capacity-remaining"));
+  assert.ok(context.resources.some((resource) => resource.id === "resource-weekly-capacity"));
+  assert.ok(context.systems.some((system) => system.id === "system-momentum-pillar-lifting"));
 });
 
 test("Today can generate from confirmed setup context", () => {
@@ -33,8 +46,22 @@ test("Today can generate from confirmed setup context", () => {
   assert.ok(today.theme.length > 0);
   assert.ok(today.protectedSession.title.length > 0);
   assert.ok(today.decisionGraph.nodes.length > 0);
+  assert.ok(today.decisionGraph.nodes.some((node) => node.id === "constraint-constraint-weekly-capacity-remaining"));
+  assert.ok(today.decisionGraph.nodes.some((node) => node.id === "constraint-resource-resource-weekly-capacity"));
 
   clearConfirmedSetupContext();
+});
+
+test("Decision Graph consumes setup capacity constraints resources and systems", () => {
+  const context = buildConfirmedSetupContext(sampleRyanSetup);
+  const facts = gatherFacts(context);
+  const graph = buildDecisionGraph(facts);
+
+  assert.ok(facts.constraints.some((constraint) => constraint.id === "constraint-weekly-capacity-remaining"));
+  assert.ok(facts.resources.some((resource) => resource.id === "resource-weekly-capacity"));
+  assert.ok(facts.systems.some((system) => system.id === "system-momentum-pillar-bjj"));
+  assert.ok(graph.nodes.some((node) => node.id === "constraint-constraint-weekly-capacity-remaining"));
+  assert.ok(graph.nodes.some((node) => node.id === "constraint-resource-resource-weekly-capacity"));
 });
 
 test("full setup handoff flow can confirm, generate Today, reset, and use Morning input", () => {
@@ -46,6 +73,7 @@ test("full setup handoff flow can confirm, generate Today, reset, and use Mornin
   assert.equal(setupContext.userName, "Ryan");
   assert.equal(setupContextIndicatorText(), "Reasoning from your confirmed profile");
   assert.ok(setupToday.protectedSession.title.length > 0);
+  assert.ok(setupToday.decisionGraph.nodes.some((node) => node.id === "constraint-constraint-weekly-capacity-remaining"));
 
   clearConfirmedSetupContext();
   const morningToday = generateToday(morningInputToUserContext({ mainIntention: "Choose from Morning input" }));
@@ -53,6 +81,7 @@ test("full setup handoff flow can confirm, generate Today, reset, and use Mornin
   assert.equal(getConfirmedSetupContext(), undefined);
   assert.equal(setupContextIndicatorText(), undefined);
   assert.equal(morningToday.protectedSession.title, "Choose from Morning input");
+  assert.ok(!morningToday.decisionGraph.nodes.some((node) => node.id === "constraint-constraint-weekly-capacity-remaining"));
 });
 
 test("setup context indicator appears when setup context is active", () => {
@@ -114,7 +143,7 @@ test("sample flow clears setup context before generating Today", () => {
   const today = generateToday(sampleRyanContext);
 
   assert.equal(getConfirmedSetupContext(), undefined);
-  assert.equal(today.protectedSession.title, "Build the smallest working Today engine slice");
+  assert.equal(today.protectedSession.title, "Write and produce the next Halou sketch.");
 });
 
 test("returning to setup can replace prior context", () => {
@@ -158,5 +187,5 @@ test("sample flow still works with no confirmed setup", () => {
 
   const today = generateToday(sampleRyanContext);
 
-  assert.equal(today.protectedSession.title, "Build the smallest working Today engine slice");
+  assert.equal(today.protectedSession.title, "Write and produce the next Halou sketch.");
 });

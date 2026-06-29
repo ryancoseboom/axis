@@ -2,27 +2,36 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { clearLocalAxisStateForDev } from "@/axis/devLocalState";
 import { buildUserContextFromSetup, sampleRyanSetup } from "@/axis/setup";
 import {
   buildSetupConfirmationSummary,
   buildSetupKnowledgeReview,
+  buildWeeklyCapacityReview,
   type PillarKnowledgeReview,
-  type SetupConfirmationSummary
+  type SetupConfirmationSummary,
+  type WeeklyCapacityReview
 } from "@/axis/setupPresentation";
-import { confirmSetupForToday } from "@/axis/setupHandoff";
+import { confirmSetupForToday, getConfirmedSetupContext } from "@/axis/setupHandoff";
 import styles from "./setup.module.css";
 
 export default function SetupPage() {
-  const [confirmed, setConfirmed] = useState(false);
+  const [confirmed, setConfirmed] = useState(() => Boolean(getConfirmedSetupContext()));
   const context = buildUserContextFromSetup(sampleRyanSetup);
   const pillars = context.pillarMemory?.pillars ?? [];
   const programs = context.pillarMemory?.programs ?? [];
   const knowledgeReview = buildSetupKnowledgeReview(sampleRyanSetup);
+  const capacityReview = buildWeeklyCapacityReview(sampleRyanSetup);
   const confirmationSummary = buildSetupConfirmationSummary(sampleRyanSetup);
 
   function confirmStartingProfile() {
     confirmSetupForToday(sampleRyanSetup);
     setConfirmed(true);
+  }
+
+  function clearLocalState() {
+    clearLocalAxisStateForDev();
+    setConfirmed(false);
   }
 
   return (
@@ -104,6 +113,14 @@ export default function SetupPage() {
         </div>
       </section>
 
+      <section className={styles.band} aria-labelledby="capacity-title">
+        <div>
+          <p className={styles.label}>Capacity</p>
+          <h2 id="capacity-title">What the week appears to hold</h2>
+        </div>
+        <WeeklyCapacityReviewSection review={capacityReview} />
+      </section>
+
       <section className={styles.confirmationBand} aria-labelledby="confirmation-title">
         <div>
           <p className={styles.label}>Confirm</p>
@@ -120,9 +137,64 @@ export default function SetupPage() {
           ) : (
             <ConfirmationSummary summary={confirmationSummary} />
           )}
+          <button className={styles.devClearAction} type="button" onClick={clearLocalState}>
+            Clear local Axis state
+          </button>
         </div>
       </section>
     </main>
+  );
+}
+
+function WeeklyCapacityReviewSection({ review }: { review: WeeklyCapacityReview }) {
+  return (
+    <div className={styles.capacityReview}>
+      <p className={styles.reviewIntro}>
+        Axis is reading this as {review.totalCapacityMinutes} minutes of weekly capacity, with {review.remainingCapacityMinutes} minutes still unclaimed.
+      </p>
+      {review.overloaded ? <p className={styles.capacityWarning}>This week is already over capacity.</p> : null}
+      <div className={styles.capacityGrid}>
+        <CapacityGroup group={review.plannedSessions} />
+        <CapacityGroup group={review.flexibleCommitments} />
+        <CapacityGroup group={review.fixedCommitments} />
+        <div className={styles.capacityGroup}>
+          <h3>Momentum</h3>
+          {review.momentumRequirements.length > 0 ? (
+            <ul>
+              {review.momentumRequirements.map((item) => (
+                <li key={item.pillarName}>
+                  {item.pillarName}: {item.plannedSessions}/{item.minimumSessions} sessions
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>Nothing active yet.</p>
+          )}
+        </div>
+      </div>
+      {review.underSupportedPillars.length > 0 ? (
+        <div className={styles.capacityNote}>
+          <h3>Needs support</h3>
+          <p>{review.underSupportedPillars.map((item) => item.pillarName).join(", ")}</p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function CapacityGroup({ group }: { group: WeeklyCapacityReview["plannedSessions"] }) {
+  return (
+    <div className={styles.capacityGroup}>
+      <h3>{group.label}</h3>
+      <p>{group.count} items / {group.totalMinutes} minutes</p>
+      {group.items.length > 0 ? (
+        <ul>
+          {group.items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }
 

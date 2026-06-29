@@ -15,7 +15,7 @@ const baseDecision: Omit<CandidateDecision, "confidence"> = {
   durationMinutes: 60,
   protects: "Creative Identity",
   opportunityId: "opportunity-test",
-  pursuitId: "pursuit-axis",
+  pursuitId: "pursuit-today",
   missionId: "mission-version-zero",
   milestoneId: "milestone-engine-slice",
   supportingNodeIds: [],

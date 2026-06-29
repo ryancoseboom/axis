@@ -57,26 +57,26 @@ export function morningInputToUserContext(input: MorningInput): UserContext {
     ],
     pursuits: [
       {
-        id: "pursuit-axis",
+        id: "pursuit-today",
         name: "Today",
         whyItMatters: "Spend the day in a way that earns self-respect."
       },
       {
-        id: "pursuit-health",
-        name: "Health",
+        id: "pursuit-lifting",
+        name: "Lifting",
         whyItMatters: "Keep energy stable enough for meaningful work and a steady evening."
       }
     ],
     missions: [
       {
         id: "mission-version-zero",
-        pursuitId: "pursuit-axis",
+        pursuitId: "pursuit-today",
         name: "Protect today's intention",
         currentNeed: mainIntention
       },
       {
         id: "mission-recovery",
-        pursuitId: "pursuit-health",
+        pursuitId: "pursuit-lifting",
         name: "Protect baseline energy",
         currentNeed: "Leave enough margin for tomorrow."
       }

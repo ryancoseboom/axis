@@ -110,7 +110,7 @@ test("weightlifting program creates DevelopmentSignal", () => {
   const signals = generateProgramDevelopmentSignals(programMemory([session("program-day-pull-biceps", "2026-06-27")]), "2026-06-28");
 
   assert.equal(signals[0]?.title, "Today's lift: Push - chest, 4 movements, 3 sets each");
-  assert.equal(signals[0]?.pillarId, "pillar-health");
+  assert.equal(signals[0]?.pillarId, "pillar-lifting");
   assert.equal(signals[0]?.type, "continue_thread");
 });
 
@@ -129,7 +129,7 @@ test("Decision Graph can consume the program signal", () => {
   });
 
   assert.ok(today.candidateDecisions.some((candidate) => candidate.title.includes("Pull - back")));
-  assert.ok(today.candidateDecisions.some((candidate) => candidate.protects === "Health"));
+  assert.ok(today.candidateDecisions.some((candidate) => candidate.protects === "Lifting"));
 });
 
 
@@ -171,7 +171,7 @@ test("completed program session creates a practice entry and updates Development
     setsCompleted: 3
   });
 
-  assert.equal(result.practiceEntry.pillarId, "pillar-health");
+  assert.equal(result.practiceEntry.pillarId, "pillar-lifting");
   assert.equal(result.practiceEntry.title, "Completed Pull - biceps.");
   assert.ok(result.developmentSignals.some((signal) => signal.title.includes("Push - chest")));
   assert.ok(result.memory.developmentSignals?.some((signal) => signal.title.includes("Push - chest")));
@@ -192,7 +192,7 @@ test("Today can recommend next program day after completion", () => {
   });
 
   assert.ok(today.candidateDecisions.some((candidate) => candidate.title.includes("Push - chest")));
-  assert.ok(today.candidateDecisions.some((candidate) => candidate.protects === "Health"));
+  assert.ok(today.candidateDecisions.some((candidate) => candidate.protects === "Lifting"));
 });
 
 test("partial program completion input falls back safely", () => {

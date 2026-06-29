@@ -1,4 +1,5 @@
 import { attachDomainModelToPillar, findDomainModel, sampleDomainModelCatalog, type DomainModelCatalog } from "./domainCatalog";
+import type { FlexibleCommitment, MomentumRequirement, PlannedSession, WeeklyPlan } from "./capacityPlanner";
 import { applyPracticeEntryToKnowledgeState, createKnowledgeMap } from "./knowledgeMaps";
 import type {
   AvailabilityWindow,
@@ -265,6 +266,29 @@ export function buildUserContextFromSetup(setup: SetupState, options: BuildUserC
   };
 }
 
+export function buildWeeklyPlanFromSetup(setup: SetupState, options: { weekStart?: string; totalCapacityMinutes?: number; reserveMinutes?: number } = {}): WeeklyPlan {
+  const validation = validateSetupState(setup);
+  if (!validation.valid) {
+    throw new SetupValidationError(validation.errors);
+  }
+
+  const weekStart = options.weekStart ?? "2026-06-29";
+
+  return {
+    id: `weekly-plan-${weekStart}`,
+    weekStart,
+    capacity: {
+      weekStart,
+      totalMinutes: options.totalCapacityMinutes ?? 2400,
+      reserveMinutes: options.reserveMinutes ?? 420
+    },
+    fixedCommitments: [],
+    flexibleCommitments: flexibleCommitmentsFromSetup(setup),
+    plannedSessions: plannedSessionsFromSetup(setup),
+    momentumRequirements: momentumRequirementsFromSetup(setup)
+  };
+}
+
 export class SetupValidationError extends Error {
   readonly errors: SetupValidationIssue[];
 
@@ -283,42 +307,22 @@ export const sampleRyanSetup: SetupState = {
   identityProfile: {
     desiredIdentityStatement: "Build a life organized around clear work, strong training, music, and care.",
     values: ["Self-respect over throughput", "Reality wins", "Protect the work before drift"],
-    longTermAspirations: ["Build Axis into a reasoning engine people can trust", "Stay dangerous and technical in BJJ", "Keep writing and producing music with Halou"],
+    longTermAspirations: ["Care for Porthos with steadiness", "Stay dangerous and technical in BJJ", "Keep writing and producing music with Halou"],
     nonNegotiables: ["No plan that ignores recovery", "Protect deep work", "Keep training honest"]
   },
   pillars: [
     {
-      name: "BJJ",
-      description: "Develop skill, composure, and technical depth in Brazilian jiu-jitsu.",
+      name: "Porthos",
+      description: "Care, relationship, and daily steadiness with Porthos.",
       priority: 8,
-      identityWeight: 8,
-      status: "active",
-      domainProfile: {
-        domainId: "domain-brazilian-jiu-jitsu",
-        domainName: "Brazilian Jiu-Jitsu",
-        aliases: ["BJJ"],
-        currentLevel: "advanced",
-        credentials: ["Purple belt"],
-        knownConstraints: [{ description: "Training must respect recovery and joint irritation." }],
-        goals: ["Sharpen Arm Bar chains", "Improve Back Takes", "Keep guard retention alive"],
-        recentHistory: ["Trained arm bars from closed guard", "Back take rounds"],
-        knownConcepts: ["Closed Guard", "Arm Bar", "Triangle", "Omoplata", "Back Takes", "Guard Retention"]
-      }
-    },
-    {
-      name: "Health",
-      description: "Protect vitality, strength, and recovery.",
-      priority: 7,
       identityWeight: 7,
       status: "active",
       domainProfile: {
-        domainName: "Weightlifting",
-        aliases: ["Strength Training"],
-        currentLevel: "intermediate",
-        knownConstraints: [{ id: "constraint-elbow-caution", description: "Use caution with elbow-irritating curl variations." }],
-        goals: ["Keep the 5-day lifting cycle moving", "Build strength without irritating elbows"],
-        recentHistory: ["Pull and biceps day", "Push and chest day"],
-        knownConcepts: ["Pull", "Push", "Back", "Biceps", "Cable Row", "Squat"]
+        domainName: "Porthos",
+        currentLevel: "advanced",
+        goals: ["Keep care steady", "Protect daily routines", "Stay present"],
+        recentHistory: ["Porthos care", "Daily steadiness"],
+        knownConcepts: ["Care", "Routine", "Presence"]
       }
     },
     {
@@ -338,42 +342,48 @@ export const sampleRyanSetup: SetupState = {
       }
     },
     {
-      name: "Work",
-      description: "Keep Porthos, writing, and buying responsibilities clear.",
+      name: "BJJ",
+      description: "Develop skill, composure, and technical depth in Brazilian jiu-jitsu.",
       priority: 8,
-      identityWeight: 7,
+      identityWeight: 8,
       status: "active",
       domainProfile: {
-        domainName: "Work",
+        domainId: "domain-brazilian-jiu-jitsu",
+        domainName: "Brazilian Jiu-Jitsu",
+        aliases: ["BJJ"],
         currentLevel: "advanced",
-        goals: ["Protect good judgment", "Keep writing sharp", "Maintain buying clarity"],
-        recentHistory: ["Porthos work", "Writing", "Buying"]
+        credentials: ["Purple belt"],
+        knownConstraints: [{ description: "Training must respect recovery and joint irritation." }],
+        goals: ["Sharpen Arm Bar chains", "Improve Back Takes", "Keep guard retention alive"],
+        recentHistory: ["Trained arm bars from closed guard", "Back take rounds"],
+        knownConcepts: ["Closed Guard", "Arm Bar", "Triangle", "Omoplata", "Back Takes", "Guard Retention"]
       }
     },
     {
-      name: "Axis",
-      description: "Build the reasoning engine and product philosophy.",
-      priority: 10,
-      identityWeight: 10,
+      name: "Lifting",
+      description: "Protect strength, vitality, and recovery.",
+      priority: 7,
+      identityWeight: 7,
       status: "active",
       domainProfile: {
-        domainName: "Axis",
-        aliases: ["Software Project"],
-        currentLevel: "advanced",
-        goals: ["Build deterministic reasoning", "Make Today trustworthy", "Keep architecture simple"],
-        recentHistory: ["Knowledge Maps", "Domain Model Generation", "Setup architecture"],
-        knownConcepts: ["Decision Graph", "Explainability", "Confidence", "Calendar", "Identity"]
+        domainName: "Weightlifting",
+        aliases: ["Strength Training"],
+        currentLevel: "intermediate",
+        knownConstraints: [{ id: "constraint-elbow-caution", description: "Use caution with elbow-irritating curl variations." }],
+        goals: ["Keep the 5-day lifting cycle moving", "Build strength without irritating elbows"],
+        recentHistory: ["Pull and biceps day", "Push and chest day"],
+        knownConcepts: ["Pull", "Push", "Back", "Biceps", "Cable Row", "Squat"]
       }
     }
   ],
   routines: [
     { pillarName: "BJJ", name: "BJJ training", cadence: "2-4 sessions per week", preferredDurationMinutes: 90 },
     { pillarName: "Music", name: "Writing and production", cadence: "weekly", preferredDurationMinutes: 90 },
-    { pillarName: "Axis", name: "Protected build block", cadence: "daily", preferredDurationMinutes: 90 }
+    { pillarName: "Porthos", name: "Porthos care", cadence: "daily", preferredDurationMinutes: 30 }
   ],
   programs: [
     {
-      pillarName: "Health",
+      pillarName: "Lifting",
       name: "5-day weightlifting cycle",
       description: "Repeating development cycle for strength and muscular balance.",
       cadence: "5-day repeating cycle",
@@ -420,6 +430,94 @@ function setupPillarToPillar(pillar: PillarSetup, domainCatalog: DomainModelCata
   const domainModel = findDomainModelForSetup(domainCatalog, pillar);
 
   return domainModel ? attachDomainModelToPillar(basePillar, domainModel) : basePillar;
+}
+
+function plannedSessionsFromSetup(setup: SetupState): PlannedSession[] {
+  const routineSessions = (setup.routines ?? []).filter((routine) => normalize(routine.pillarName) !== "porthos").flatMap((routine) => {
+    const count = sessionCountFromCadence(routine.cadence);
+    return Array.from({ length: count }, (_, index) => ({
+      id: `capacity-routine-${slug(routine.pillarName)}-${slug(routine.name)}-${index + 1}`,
+      kind: "planned_session" as const,
+      title: routine.name,
+      pillarId: `pillar-${slug(routine.pillarName)}`,
+      durationMinutes: routine.preferredDurationMinutes ?? defaultDurationForPillar(routine.pillarName),
+      cognitiveLoad: cognitiveLoadForPillar(routine.pillarName),
+      physicalLoad: physicalLoadForPillar(routine.pillarName),
+      momentumValue: 7
+    }));
+  });
+  const programSessions = (setup.programs ?? [])
+    .filter((program) => (program.status ?? "active") === "active")
+    .flatMap((program) => {
+      const count = sessionCountFromCadence(program.cadence, program.days?.length);
+      const days = program.days?.length ? program.days : [{ name: program.name, focus: program.name }];
+
+      return Array.from({ length: count }, (_, index) => {
+        const day = days[index % days.length];
+        return {
+          id: `capacity-program-${slug(program.pillarName)}-${slug(program.name)}-${index + 1}`,
+          kind: "planned_session" as const,
+          title: day ? `${program.name}: ${day.name}` : program.name,
+          pillarId: `pillar-${slug(program.pillarName)}`,
+          durationMinutes: program.preferredDurationMinutes ?? defaultDurationForPillar(program.pillarName),
+          physicalLoad: "medium" as const,
+          recoveryCost: "medium" as const,
+          momentumValue: 8
+        };
+      });
+    });
+
+  return [...routineSessions, ...programSessions].sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function flexibleCommitmentsFromSetup(setup: SetupState): FlexibleCommitment[] {
+  const porthosRoutines = (setup.routines ?? []).filter((routine) => normalize(routine.pillarName) === "porthos");
+  if (porthosRoutines.length > 0) {
+    return porthosRoutines.flatMap((routine) => {
+      const count = sessionCountFromCadence(routine.cadence);
+      return Array.from({ length: count }, (_, index) => ({
+        id: `capacity-flex-${slug(routine.pillarName)}-${slug(routine.name)}-${index + 1}`,
+        kind: "flexible" as const,
+        title: routine.name,
+        pillarId: `pillar-${slug(routine.pillarName)}`,
+        durationMinutes: routine.preferredDurationMinutes ?? defaultDurationForPillar(routine.pillarName),
+        movable: true,
+        recoveryCost: "low" as const,
+        cognitiveLoad: "medium" as const,
+        momentumValue: 8
+      }));
+    });
+  }
+
+  return setup.pillars.filter((pillar) => normalize(pillar.name) === "porthos").map((pillar) => ({
+    id: "capacity-flex-porthos-care-1",
+    kind: "flexible" as const,
+    title: "Porthos care",
+    pillarId: `pillar-${slug(pillar.name)}`,
+    durationMinutes: defaultDurationForPillar(pillar.name),
+    movable: true,
+    recoveryCost: "low" as const,
+    cognitiveLoad: "medium" as const,
+    momentumValue: 8
+  }));
+}
+
+function momentumRequirementsFromSetup(setup: SetupState): MomentumRequirement[] {
+  return setup.pillars
+    .filter((pillar) => (pillar.status ?? "active") === "active")
+    .map((pillar) => {
+      const program = setup.programs?.find((item) => normalize(item.pillarName) === normalize(pillar.name) && (item.status ?? "active") === "active");
+      const routine = setup.routines?.find((item) => normalize(item.pillarName) === normalize(pillar.name));
+      const count = program ? sessionCountFromCadence(program.cadence, program.days?.length) : routine ? sessionCountFromCadence(routine.cadence) : defaultMomentumSessionsForPillar(pillar.name);
+      const duration = program?.preferredDurationMinutes ?? routine?.preferredDurationMinutes ?? defaultDurationForPillar(pillar.name);
+
+      return {
+        pillarId: `pillar-${slug(pillar.name)}`,
+        pillarName: pillar.name,
+        minimumSessions: count,
+        minimumMinutes: count * duration
+      };
+    });
 }
 
 function initializeKnowledgeStatesFromSetup(
@@ -712,6 +810,50 @@ function resourceNamesFromSetup(setup: SetupState): string[] {
     ...setup.routines?.flatMap((routine) => routine.resources ?? []) ?? [],
     ...setup.programs?.flatMap((program) => [...program.resources ?? [], ...program.equipment ?? []]) ?? []
   ]);
+}
+
+function sessionCountFromCadence(cadence: string, fallback?: number): number {
+  const normalized = normalize(cadence);
+  const range = normalized.match(/(\d+)\s+(\d+)/);
+  if (range) return Math.max(Number(range[1]), Number(range[2]));
+
+  const single = normalized.match(/\d+/);
+  if (single) return Number(single[0]);
+
+  if (normalized.includes("daily")) return 7;
+  if (normalized.includes("weekly")) return 1;
+  return Math.max(1, fallback ?? 1);
+}
+
+function defaultMomentumSessionsForPillar(pillarName: string): number {
+  const name = normalize(pillarName);
+  if (name === "porthos") return 7;
+  if (name === "lifting") return 4;
+  if (name === "bjj") return 2;
+  if (name === "music") return 2;
+  return 1;
+}
+
+function defaultDurationForPillar(pillarName: string): number {
+  const name = normalize(pillarName);
+  if (name === "porthos") return 30;
+  if (name === "lifting") return 60;
+  if (name === "bjj") return 90;
+  if (name === "music") return 90;
+  return 45;
+}
+
+function cognitiveLoadForPillar(pillarName: string) {
+  const name = normalize(pillarName);
+  if (name === "music") return "high" as const;
+  if (name === "porthos") return "medium" as const;
+  return "medium" as const;
+}
+
+function physicalLoadForPillar(pillarName: string) {
+  const name = normalize(pillarName);
+  if (name === "bjj" || name === "lifting") return "high" as const;
+  return "low" as const;
 }
 
 function conceptsForHistory(history: string, concepts: string[]): string[] {
